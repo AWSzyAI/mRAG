@@ -1,0 +1,5 @@
+
+// make alias
+
+mc: make cmd
+ms: make sync
