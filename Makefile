@@ -1,4 +1,4 @@
-.PHONY: sync cmd alias config bpe clean
+.PHONY: sync pull pull-results cmd alias config bpe clean
 
 # =====================================================================
 # ┌─────────────────┐          rsync           ┌──────────────────┐
@@ -29,7 +29,7 @@ BPE_NAME ?= bpe_simple_vocab_16e6.txt.gz
 
 CONDA_BIN ?= conda
 CMD ?=
-KNOWN_TARGETS := sync cmd alias config bpe clean
+KNOWN_TARGETS := sync pull pull-results cmd alias config bpe clean
 CMD_GOALS := $(filter-out $(KNOWN_TARGETS),$(MAKECMDGOALS))
 
 ifneq ($(filter cmd,$(MAKECMDGOALS)),)
@@ -64,6 +64,29 @@ sync:
 		-e ssh \
 		'$(LOCAL_DIR)/' \
 		'$(SSH_HOST):$(REMOTE_DIR)/'
+
+pull: pull-results
+
+pull-results:
+	$(ensure_remote_sync_config)
+	@set -e; \
+	local_bench='$(LOCAL_DIR)/github/MRAG-Bench'; \
+	remote_bench='$(REMOTE_DIR)/github/MRAG-Bench'; \
+	mkdir -p "$$local_bench/results"; \
+	remote_json="$$remote_bench/llava_one_vision_gt_rag_results.jsonl"; \
+	local_json="$$local_bench/llava_one_vision_gt_rag_results.jsonl"; \
+	if ssh $(SSH_HOST) "test -f \"$$remote_json\""; then \
+		rsync -azP -e ssh "$(SSH_HOST):$$remote_json" "$$local_json"; \
+	else \
+		echo "[WARN] Not found on remote: $$remote_json"; \
+	fi; \
+	remote_results_dir="$$remote_bench/results/"; \
+	local_results_dir="$$local_bench/results/"; \
+	if ssh $(SSH_HOST) "test -d \"$$remote_results_dir\""; then \
+		rsync -azP -e ssh "$(SSH_HOST):$$remote_results_dir" "$$local_results_dir"; \
+	else \
+		echo "[WARN] Not found on remote: $$remote_results_dir"; \
+	fi
 
 # 在远程执行命令:
 # 1) make cmd CMD='nvidia-smi'

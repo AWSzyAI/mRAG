@@ -1,0 +1,25 @@
+\begin{table}[htbp]
+\centering
+\small
+\caption{MRAG-Bench accuracy comparison between baseline decoding and beam search ($\texttt{MRAG\_NUM\_BEAMS}=5$).}
+\label{tab:mrag_beam_vs_baseline}
+\begin{tabular}{lrrr}
+\hline
+\textbf{Metric} & \textbf{Baseline} & \textbf{Beam=5} & \textbf{$\Delta$} \\
+\hline
+Overall Accuracy & \textbf{59.05} & 57.21 & -1.84 \\
+Partial & \textbf{64.23} & 60.98 & -3.25 \\
+Others & 64.17 & 64.17 & 0.00 \\
+Temporal & 57.72 & \textbf{59.06} & +1.34 \\
+Biological & 55.88 & 55.88 & 0.00 \\
+Incomplete & 29.41 & \textbf{30.39} & +0.98 \\
+Obstruction & \textbf{67.59} & 63.89 & -3.70 \\
+Angle & \textbf{59.63} & 56.21 & -3.42 \\
+Scope & \textbf{66.67} & 63.73 & -2.94 \\
+Deformation & \textbf{56.86} & 54.90 & -1.96 \\
+\hline
+\end{tabular}
+
+\vspace{2pt}
+{\footnotesize $\Delta$ = Beam=5 $-$ Baseline; higher is better.}
+\end{table}

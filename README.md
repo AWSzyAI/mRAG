@@ -30,6 +30,9 @@ eval "$(make -s alias)"
 
 # make sync
 ms 
+
+# pull remote MRAG-Bench results back to local
+mr
 ```
 
 ## MRAG-BENCH环境
@@ -72,6 +75,7 @@ cd github/MRAG-Bench && \
 CUDA_VISIBLE_DEVICES=0,1 \
 MRAG_HF_HOME="$PWD/.cache/huggingface-mrag" \
 MRAG_MODEL_LOCAL_DIR="$PWD/../../models/llava-onevision-qwen2-7b-ov" \
+MRAG_NUM_BEAMS=5 \
 MRAG_MAX_NEW_TOKENS=64 \
 MRAG_MAX_RAG_IMAGES=3 \
 HF_ENDPOINT=https://hf-mirror.com \
@@ -86,19 +90,8 @@ HF_HUB_ENABLE_HF_TRANSFER=0 \
 HF_ENDPOINT=https://hf-mirror.com \
 bash eval/models/run_model.sh
 
-# 也可以强制指定任意本地目录加载：
-MRAG_MODEL_PATH="/absolute/path/to/llava-onevision-qwen2-7b-ov" \
-HF_ENDPOINT=https://hf-mirror.com \
-bash eval/models/run_model.sh
-
-MRAG_HF_HOME="$PWD/.cache/huggingface-mrag" \
-MRAG_HF_DEBUG=1 \
-HF_ENDPOINT=https://hf-mirror.com \
-bash eval/models/run_model.sh
-
 cd ../../
 
-# 这条评估不知道要运行多久，看不到进度条和ETC,加上
 cd github/MRAG-Bench && python eval/score.py -i llava_one_vision_gt_rag_results.jsonl && cd ../../
 
 ```

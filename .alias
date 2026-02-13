@@ -3,3 +3,4 @@
 
 mc: make cmd
 ms: make sync
+mr: make pull-results
