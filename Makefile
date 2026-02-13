@@ -1,15 +1,35 @@
-.PHONY: sync cmd alias config
+.PHONY: sync cmd alias config bpe clean
 
-SSH_HOST ?= NNU
-REMOTE_DIR ?= /home/user/code/mRAG
+# =====================================================================
+# ┌─────────────────┐          rsync           ┌──────────────────┐
+# │    本地 Mac   	 │ ──────────────────────→	│      服务器       │
+# │  - codex	   	│                      	    │   - GPU 运行     │
+# │  - Claude Code  │ ←──────────────────────  	│   - 模型推理      │
+# └─────────────────┘        结果拉取          	 └──────────────────┘
+# =====================================================================
+
+# SYNC_HOST ?= Ocean-NAT
+# SYNC_HOST ?= featurize
+SYNC_HOST ?= AC
+
+
+# =====================================================================
+SYNC_FILE ?= .sync_ssh
+SSH_HOST ?= $(SYNC_HOST)
+REMOTE_DIR ?= $(strip $(shell awk -v host='$(SYNC_HOST)' -v key='REMOTE_DIR' -f scripts/read_sync_value.awk '$(SYNC_FILE)' 2>/dev/null))
+CONDA_ENV ?= $(strip $(shell awk -v host='$(SYNC_HOST)' -v key='CONDA_ENV' -f scripts/read_sync_value.awk '$(SYNC_FILE)' 2>/dev/null))
+# =====================================================================
+
 LOCAL_DIR ?= $(CURDIR)
 EXCLUDE_FILE ?= .exclude
 ALIAS_FILE ?= .alias
 SSH_KEY ?= $(HOME)/.ssh/id_rsa.pub
-CONDA_ENV ?= /home/user/env/envs/py310
+BPE_FILE ?= models/bpe_simple_vocab_16e6.txt.gz
+BPE_NAME ?= bpe_simple_vocab_16e6.txt.gz
+
 CONDA_BIN ?= conda
 CMD ?=
-KNOWN_TARGETS := sync cmd alias config
+KNOWN_TARGETS := sync cmd alias config bpe clean
 CMD_GOALS := $(filter-out $(KNOWN_TARGETS),$(MAKECMDGOALS))
 
 ifneq ($(filter cmd,$(MAKECMDGOALS)),)
@@ -19,10 +39,28 @@ endif
 endif
 
 
+define ensure_remote_sync_config
+	@if [ -z "$(SSH_HOST)" ] || [ -z "$(REMOTE_DIR)" ] || [ -z "$(CONDA_ENV)" ]; then \
+		echo "Missing remote sync config."; \
+		echo "SYNC_HOST=$(SYNC_HOST) SSH_HOST=$(SSH_HOST) REMOTE_DIR=$(REMOTE_DIR) CONDA_ENV=$(CONDA_ENV)"; \
+		echo "Please check $(SYNC_FILE), expected block:"; \
+		echo "  Host $(SYNC_HOST)"; \
+		echo "    REMOTE_DIR ?= ..."; \
+		echo "    CONDA_ENV ?= ..."; \
+		exit 2; \
+	fi
+endef
+
+
 
 sync:
+	$(ensure_remote_sync_config)
+	@set -e; \
+	filter_file="$$(mktemp)"; \
+	trap 'rm -f "$$filter_file"' EXIT; \
+	awk -f scripts/build_rsync_filter.awk '$(EXCLUDE_FILE)' > "$$filter_file"; \
 	rsync -azP --delete \
-		--exclude-from='$(EXCLUDE_FILE)' \
+		--filter="merge $$filter_file" \
 		-e ssh \
 		'$(LOCAL_DIR)/' \
 		'$(SSH_HOST):$(REMOTE_DIR)/'
@@ -31,6 +69,7 @@ sync:
 # 1) make cmd CMD='nvidia-smi'
 # 2) make cmd   # 无 CMD 时自动取本地历史上一条命令
 cmd:
+	$(ensure_remote_sync_config)
 	@set -e; \
 	LC_ALL=C; export LC_ALL; \
 	run_cmd='$(CMD)'; \
@@ -105,6 +144,7 @@ alias:
 	' $(ALIAS_FILE)
 
 config:
+	$(ensure_remote_sync_config)
 	@if [ ! -f "$(SSH_KEY)" ]; then \
 		echo "SSH key not found: $(SSH_KEY)"; \
 		exit 2; \
@@ -132,6 +172,57 @@ config:
 		printf 'fi\n'; \
 		printf '%s\n' "$$end"; \
 	} > "$$rc_file"; \
-	rm -f "$$tmp_file"; \
-	echo "Updated $$rc_file with mRAG alias bootstrap."; \
-	echo "To use mc/ms in this current shell now, run: eval \"\$$(make -s alias)\""
+		rm -f "$$tmp_file"; \
+		echo "Updated $$rc_file with mRAG alias bootstrap."; \
+		echo "To use mc/ms in this current shell now, run: eval \"\$$(make -s alias)\""
+
+bpe:
+	$(ensure_remote_sync_config)
+	@set -e; \
+	mkdir -p models; \
+	local_target="$(BPE_FILE)"; \
+	local_src1="github/LLaVA-NeXT/llava/model/multimodal_encoder/dev_eva_clip/eva_clip/$(BPE_NAME)"; \
+	local_src2="$$HOME/.cache/scenic/clip/$(BPE_NAME)"; \
+	if [ -f "$$local_target" ]; then \
+		echo "Local BPE exists: $$local_target"; \
+	elif [ -f "$$local_src1" ]; then \
+		cp "$$local_src1" "$$local_target"; \
+		echo "Local BPE copied: $$local_src1 -> $$local_target"; \
+	elif [ -f "$$local_src2" ]; then \
+		cp "$$local_src2" "$$local_target"; \
+		echo "Local BPE copied: $$local_src2 -> $$local_target"; \
+	else \
+		echo "Local BPE source not found. Skipped local copy."; \
+	fi; \
+	ssh $(SSH_HOST) "bash -lc 'set -e; \
+		remote_target=\"$(REMOTE_DIR)/models/$(BPE_NAME)\"; \
+		remote_src1=\"$(REMOTE_DIR)/github/LLaVA-NeXT/llava/model/multimodal_encoder/dev_eva_clip/eva_clip/$(BPE_NAME)\"; \
+		remote_src2=\"\$$HOME/.cache/scenic/clip/$(BPE_NAME)\"; \
+		mkdir -p \"$(REMOTE_DIR)/models\"; \
+		if [ -f \"\$$remote_target\" ]; then \
+			echo \"Remote BPE exists: \$$remote_target\"; \
+		elif [ -f \"\$$remote_src1\" ]; then \
+			cp \"\$$remote_src1\" \"\$$remote_target\"; \
+			echo \"Remote BPE copied: \$$remote_src1 -> \$$remote_target\"; \
+		elif [ -f \"\$$remote_src2\" ]; then \
+			cp \"\$$remote_src2\" \"\$$remote_target\"; \
+			echo \"Remote BPE copied: \$$remote_src2 -> \$$remote_target\"; \
+		else \
+			echo \"Remote BPE source not found. Run tokenizer once online or place file manually.\"; \
+			exit 2; \
+		fi'"
+
+clean:
+	@set -e; \
+	echo "Cleaning Python cache files..."; \
+	find . \
+		\( -path "./.git" -o -path "./.venv" \) -prune -o \
+		-type d \
+		\( -name "__pycache__" -o -name ".pytest_cache" -o -name ".mypy_cache" -o -name ".ruff_cache" -o -name ".ipynb_checkpoints" \) \
+		-prune -exec rm -rf {} +; \
+	find . \
+		\( -path "./.git" -o -path "./.venv" \) -prune -o \
+		-type f \
+		\( -name "*.pyc" -o -name "*.pyo" -o -name "*.pyd" \) \
+		-delete; \
+	echo "Clean complete."
