@@ -1,7 +1,41 @@
 # mRAG - 多模态检索增强生成评估项目
 
 > **AI Assistant 请优先读取本文件**
-> 最后更新: 2026-02-12
+> 最后更新: 2026-02-14
+
+## AI 快速上下文（先看这里）
+
+- 主开发端: `MacBook Air M2`（Git source of truth）。
+- 服务器端: `AC/NNU`（运行环境，可临时改代码）。
+- 当前会话常在服务器端，可能没有 `.git`；不要假设本机可直接 `git status`。
+- 代码同步主命令:
+  - `make sync` / `ms`: 本地 -> 服务器下发代码。
+  - `make pull`: 预览拉取（默认只 dry-run，不落地）。
+  - `make pull y`: 按 `pull_list.txt` 真正拉取。
+  - `make pull result y` / `mr`: 按 `result.txt` 拉取结果文件。
+- `make pull -y` 不可用（GNU make 会把 `-y` 识别成 make 参数）；使用尾参 `y`。
+- 角色文件:
+  - 本机: `.agent/ROLE.md`
+  - 回流远端角色: `.agent/ROLE.<SYNC_HOST>.md`
+  - `make config` 会自动初始化/同步 ROLE。
+
+## M2 首次引导（当 M2 还是旧 Makefile）
+
+如果 AC 上已更新 pull 机制，而 M2 还没有这些脚本，先在 M2 执行一次引导同步:
+
+```bash
+scp AC:/home/database/2025/mRAG/Makefile .
+scp AC:/home/database/2025/mRAG/.alias .
+scp AC:/home/database/2025/mRAG/pull_list.txt .
+scp AC:/home/database/2025/mRAG/result.txt .
+```
+
+然后:
+
+```bash
+make pull
+make pull y
+```
 
 ## 🎯 项目目标
 
@@ -18,6 +52,10 @@ mc "cd github/MRAG-Bench && conda activate llava && bash eval/models/run_model.s
 
 # 3. 查看结果
 mc "cd github/MRAG-Bench && python eval/score.py -i llava_one_vision_gt_rag_results.jsonl"
+
+# 4. 拉取回主开发端（默认预览）
+make pull result
+make pull result y
 ```
 
 ## 📊 当前状态

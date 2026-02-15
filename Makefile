@@ -1,4 +1,4 @@
-.PHONY: sync pull pull-results cmd alias config bpe clean
+.PHONY: sync sync-code pull pull-role cmd alias config role-local role-remote role-show bpe clean
 
 # =====================================================================
 # ┌─────────────────┐          rsync           ┌──────────────────┐
@@ -8,9 +8,9 @@
 # └─────────────────┘        结果拉取          	 └──────────────────┘
 # =====================================================================
 
-# SYNC_HOST ?= Ocean-NAT
+SYNC_HOST ?= Ocean-NAT
 # SYNC_HOST ?= featurize
-SYNC_HOST ?= AC
+# SYNC_HOST ?= AC
 
 
 # =====================================================================
@@ -23,16 +23,23 @@ CONDA_ENV ?= $(strip $(shell awk -v host='$(SYNC_HOST)' -v key='CONDA_ENV' -f sc
 LOCAL_DIR ?= $(CURDIR)
 EXCLUDE_FILE ?= .exclude
 ALIAS_FILE ?= .alias
+PULL_DEFAULT_LIST ?= pull_list.txt
 SSH_KEY ?= $(HOME)/.ssh/id_rsa.pub
 BPE_FILE ?= models/bpe_simple_vocab_16e6.txt.gz
 BPE_NAME ?= bpe_simple_vocab_16e6.txt.gz
 
 CONDA_BIN ?= conda
 CMD ?=
-KNOWN_TARGETS := sync pull pull-results cmd alias config bpe clean
+KNOWN_TARGETS := sync sync-code pull pull-role cmd alias config role-local role-remote role-show bpe clean
 CMD_GOALS := $(filter-out $(KNOWN_TARGETS),$(MAKECMDGOALS))
 
 ifneq ($(filter cmd,$(MAKECMDGOALS)),)
+ifneq ($(strip $(CMD_GOALS)),)
+$(eval $(CMD_GOALS):;@:)
+endif
+endif
+
+ifneq ($(filter pull,$(MAKECMDGOALS)),)
 ifneq ($(strip $(CMD_GOALS)),)
 $(eval $(CMD_GOALS):;@:)
 endif
@@ -54,6 +61,9 @@ endef
 
 
 sync:
+	@$(MAKE) sync-code
+
+sync-code:
 	$(ensure_remote_sync_config)
 	@set -e; \
 	filter_file="$$(mktemp)"; \
@@ -63,29 +73,81 @@ sync:
 		--filter="merge $$filter_file" \
 		-e ssh \
 		'$(LOCAL_DIR)/' \
-		'$(SSH_HOST):$(REMOTE_DIR)/'
+			'$(SSH_HOST):$(REMOTE_DIR)/'
 
-pull: pull-results
-
-pull-results:
+pull:
 	$(ensure_remote_sync_config)
 	@set -e; \
-	local_bench='$(LOCAL_DIR)/github/MRAG-Bench'; \
-	remote_bench='$(REMOTE_DIR)/github/MRAG-Bench'; \
-	mkdir -p "$$local_bench/results"; \
-	remote_json="$$remote_bench/llava_one_vision_gt_rag_results.jsonl"; \
-	local_json="$$local_bench/llava_one_vision_gt_rag_results.jsonl"; \
-	if ssh $(SSH_HOST) "test -f \"$$remote_json\""; then \
-		rsync -azP -e ssh "$(SSH_HOST):$$remote_json" "$$local_json"; \
-	else \
-		echo "[WARN] Not found on remote: $$remote_json"; \
+	pull_args='$(CMD_GOALS)'; \
+	list_file='$(PULL_DEFAULT_LIST)'; \
+	apply_mode=0; \
+	if [ "$(APPLY)" = "1" ] || [ "$(Y)" = "1" ]; then apply_mode=1; fi; \
+	for arg in $$pull_args; do \
+		case "$$arg" in \
+			y|yes|--yes|-y) apply_mode=1 ;; \
+			*.txt) list_file="$$arg" ;; \
+			*) \
+				if [ -f "$$arg.txt" ]; then \
+					list_file="$$arg.txt"; \
+				else \
+					list_file="$$arg"; \
+				fi ;; \
+		esac; \
+	done; \
+	if [ ! -f "$$list_file" ]; then \
+		echo "Pull list not found: $$list_file"; \
+		echo "Usage:"; \
+		echo "  make pull                # preview using $(PULL_DEFAULT_LIST)"; \
+		echo "  make pull result         # preview using result.txt"; \
+		echo "  make pull y              # apply using $(PULL_DEFAULT_LIST)"; \
+		echo "  make pull result y       # apply using result.txt"; \
+		echo "  make pull APPLY=1        # apply using $(PULL_DEFAULT_LIST)"; \
+		echo "Note: use trailing 'y' (not '-y')."; \
+		exit 2; \
 	fi; \
-	remote_results_dir="$$remote_bench/results/"; \
-	local_results_dir="$$local_bench/results/"; \
-	if ssh $(SSH_HOST) "test -d \"$$remote_results_dir\""; then \
-		rsync -azP -e ssh "$(SSH_HOST):$$remote_results_dir" "$$local_results_dir"; \
+	tmp_list="$$(mktemp)"; \
+	tmp_log="$$(mktemp)"; \
+	trap 'rm -f "$$tmp_list" "$$tmp_log"' EXIT; \
+	awk '\
+		{ line=$$0; sub(/\r$$/, "", line); } \
+		/^[[:space:]]*$$/ { next } \
+		/^[[:space:]]*#/ { next } \
+		{ gsub(/^[[:space:]]+|[[:space:]]+$$/, "", line); print line } \
+	' "$$list_file" > "$$tmp_list"; \
+	if [ ! -s "$$tmp_list" ]; then \
+		echo "Pull list is empty after filtering comments/blanks: $$list_file"; \
+		exit 2; \
+	fi; \
+	echo "Pull list: $$list_file"; \
+	if [ "$$apply_mode" -eq 1 ]; then \
+		echo "Mode: APPLY (download changes)"; \
 	else \
-		echo "[WARN] Not found on remote: $$remote_results_dir"; \
+		echo "Mode: PREVIEW (dry-run only)"; \
+	fi; \
+	echo "---- rsync itemized changes ----"; \
+	rsync_args='-azP --itemize-changes --stats -e ssh --files-from'; \
+	if [ "$$apply_mode" -eq 0 ]; then \
+		rsync $$rsync_args "$$tmp_list" --dry-run "$(SSH_HOST):$(REMOTE_DIR)/" "$(LOCAL_DIR)/" | tee "$$tmp_log"; \
+	else \
+		rsync $$rsync_args "$$tmp_list" "$(SSH_HOST):$(REMOTE_DIR)/" "$(LOCAL_DIR)/" | tee "$$tmp_log"; \
+	fi; \
+	change_count="$$(awk '/^[<>ch\*\.][^ ]*[[:space:]]/ {n++} END {print n+0}' "$$tmp_log")"; \
+	echo "---- summary ----"; \
+	echo "Changed entries: $$change_count"; \
+	grep -E 'Number of regular files transferred:|Total transferred file size:' "$$tmp_log" || true
+
+pull-role:
+	$(ensure_remote_sync_config)
+	@set -e; \
+	local_agent='$(LOCAL_DIR)/.agent'; \
+	local_role="$$local_agent/ROLE.$(SYNC_HOST).md"; \
+	remote_role='$(REMOTE_DIR)/.agent/ROLE.md'; \
+	mkdir -p "$$local_agent"; \
+	if ssh $(SSH_HOST) "test -f \"$$remote_role\""; then \
+		rsync -azP -e ssh "$(SSH_HOST):$$remote_role" "$$local_role"; \
+		echo "Pulled remote role to: $$local_role"; \
+	else \
+		echo "[WARN] Not found on remote: $$remote_role"; \
 	fi
 
 # 在远程执行命令:
@@ -194,10 +256,68 @@ config:
 		printf '  eval "$$(make -s -C %s alias 2>/dev/null)"\n' '$(LOCAL_DIR)'; \
 		printf 'fi\n'; \
 		printf '%s\n' "$$end"; \
-	} > "$$rc_file"; \
-		rm -f "$$tmp_file"; \
-		echo "Updated $$rc_file with mRAG alias bootstrap."; \
-		echo "To use mc/ms in this current shell now, run: eval \"\$$(make -s alias)\""
+		} > "$$rc_file"; \
+			rm -f "$$tmp_file"; \
+			echo "Updated $$rc_file with mRAG alias bootstrap."; \
+			echo "To use mc/ms in this current shell now, run: eval \"\$$(make -s alias)\""
+	@$(MAKE) role-local
+	@$(MAKE) role-remote
+	@$(MAKE) pull-role
+
+role-local:
+	@set -e; \
+	mkdir -p .agent; \
+	role_kind="main-dev"; \
+	if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then role_kind="server-runtime"; fi; \
+	ts="$$(date -u '+%Y-%m-%dT%H:%M:%SZ')"; \
+	hn="$$(hostname -s 2>/dev/null || hostname)"; \
+	usr="$$(whoami)"; \
+		{ \
+			echo "# ROLE"; \
+		echo ""; \
+		echo "- role_kind: $$role_kind"; \
+		echo "- node: $$usr@$$hn"; \
+		echo "- sync_host: $(SYNC_HOST)"; \
+		echo "- remote_dir: $(REMOTE_DIR)"; \
+		echo "- generated_at_utc: $$ts"; \
+		echo ""; \
+		echo "## Notes"; \
+		echo "- main-dev: primary edit and git source of truth"; \
+		echo "- server-runtime: execute workloads, keep data/models/cache local to server"; \
+	} > .agent/ROLE.md; \
+	echo "Wrote local role: .agent/ROLE.md ($$role_kind)"
+
+role-remote:
+	$(ensure_remote_sync_config)
+	@set -e; \
+	tmp_file="$$(mktemp)"; \
+	ts="$$(date -u '+%Y-%m-%dT%H:%M:%SZ')"; \
+	hn='$(SSH_HOST)'; \
+	{ \
+		echo "# ROLE"; \
+		echo ""; \
+		echo "- role_kind: server-runtime"; \
+		echo "- node: $$hn"; \
+		echo "- sync_host: $(SYNC_HOST)"; \
+		echo "- remote_dir: $(REMOTE_DIR)"; \
+		echo "- generated_at_utc: $$ts"; \
+		echo ""; \
+			echo "## Notes"; \
+			echo "- This node can run workloads and may receive temporary edits."; \
+			echo "- Pull selected paths back to main-dev via: make pull <list> y"; \
+		} > "$$tmp_file"; \
+	ssh $(SSH_HOST) "mkdir -p '$(REMOTE_DIR)/.agent'"; \
+	rsync -azP -e ssh "$$tmp_file" "$(SSH_HOST):$(REMOTE_DIR)/.agent/ROLE.md"; \
+	rm -f "$$tmp_file"; \
+	echo "Wrote remote role: $(SSH_HOST):$(REMOTE_DIR)/.agent/ROLE.md"
+
+role-show:
+	@set -e; \
+	echo "[local] .agent/ROLE.md"; \
+	if [ -f .agent/ROLE.md ]; then sed -n '1,80p' .agent/ROLE.md; else echo "missing"; fi; \
+	echo ""; \
+	echo "[remote] $(SSH_HOST):$(REMOTE_DIR)/.agent/ROLE.md"; \
+	ssh $(SSH_HOST) "if [ -f '$(REMOTE_DIR)/.agent/ROLE.md' ]; then sed -n '1,80p' '$(REMOTE_DIR)/.agent/ROLE.md'; else echo 'missing'; fi"
 
 bpe:
 	$(ensure_remote_sync_config)

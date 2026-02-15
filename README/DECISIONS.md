@@ -119,6 +119,59 @@ conda activate llava
 
 ---
 
+## ADR-006: 统一 pull 清单机制（预览默认，`y` 执行）
+
+**日期**: 2026-02-14
+**状态**: ✅ 已采纳
+
+### 背景
+原有 pull 逻辑按目标拆分（如仅 result），难以覆盖 AC 临时改代码回流到 M2 的场景，也不利于在拉取前评估变更规模。
+
+### 决策
+将 pull 统一为清单驱动:
+
+- `make pull` 使用 `pull_list.txt` 进行 dry-run 预览。
+- `make pull y` 才实际下载。
+- `make pull result y` 使用 `result.txt` 拉取结果产物。
+- `mr` 别名映射为 `make pull result y`。
+
+### 实现
+- `Makefile` 的 `pull` 目标支持:
+  - list 选择: `<name>.txt`（如 `result` -> `result.txt`）
+  - 执行开关: `y`（推荐）或 `APPLY=1`（兼容）
+  - 输出: `rsync --itemize-changes --stats` 变更规模
+- 新增 `pull_list.txt` 与 `result.txt`。
+
+### 后果
+- ✅ 拉取前可见差异规模，降低误操作风险
+- ✅ AC 临时改动可按路径清单回流到 M2
+- ✅ 不再依赖单独的 `pull-code` / `pull-results` 工作流
+- ⚠️ 维护者需保证 pull 清单文件及时更新
+
+---
+
+## ADR-007: ROLE 元数据纳入 `make config`
+
+**日期**: 2026-02-14
+**状态**: ✅ 已采纳
+
+### 背景
+AI 在不同节点（M2 主开发端 vs AC/NNU 服务器端）会看到不同上下文，缺少显式角色信息易导致误判。
+
+### 决策
+把 ROLE 文档初始化并入 `make config`：
+
+- 本地生成 `.agent/ROLE.md`
+- 远端生成 `$(REMOTE_DIR)/.agent/ROLE.md`
+- 回流远端角色到本地 `.agent/ROLE.<SYNC_HOST>.md`
+
+### 后果
+- ✅ AI 对话可以快速识别当前节点角色
+- ✅ 新增服务器时可自动生成对应角色文档
+- ⚠️ 需要 `.sync_ssh` 提供完整 `SYNC_HOST/REMOTE_DIR/CONDA_ENV`
+
+---
+
 ## 待决策事项
 
 ### TBD-001: 模型文件持久化位置

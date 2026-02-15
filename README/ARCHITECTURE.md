@@ -68,9 +68,17 @@ LLaVA One Vision 推理
 | 命令 | 功能 | 别名 |
 |------|------|------|
 | `make sync` | 本地 → 服务器同步 | `ms` |
+| `make pull` | 按 pull list 预览或拉取回本地 | - |
 | `make cmd` | 远程命令执行 | `mc` |
 | `make config` | SSH 免密 + 别名配置 | - |
 | `make alias` | 输出别名定义 | - |
+| `make pull-role` | 拉取远端 ROLE 元数据 | - |
+
+拉取命令约定:
+- `make pull` 仅预览（dry-run）
+- `make pull y` 执行拉取（默认清单 `pull_list.txt`）
+- `make pull result y` 执行结果拉取（清单 `result.txt`）
+- `make pull -y` 不可用（`-y` 会被 GNU make 当作参数）
 
 ### 2. 模型推理流程
 

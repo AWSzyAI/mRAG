@@ -1,18 +1,6 @@
 # mRAG
 using magiclens to MRAG-BENCH
 
-文件传输瓶颈：
-```
-.cache
-data/
-models/
-github/magiclens/data/***
-github/magiclens/models/***
-github/MRAG-Bench/.cache/
-!github/MRAG-Bench/eval/models
-```
-
-
 
 ## rsync
 NNU服务器（VScode Remote-SSH）无法使用CodeX，Claude Code，只能在本地改代码，在服务器上运行。
@@ -28,10 +16,26 @@ cd ..
 make config
 eval "$(make -s alias)"
 
+# 如果 M2 还是旧版本（没有 pull_list 机制），先引导同步:
+# scp AC:/home/database/2025/mRAG/Makefile .
+# scp AC:/home/database/2025/mRAG/.alias .
+# scp AC:/home/database/2025/mRAG/pull_list.txt .
+# scp AC:/home/database/2025/mRAG/result.txt .
+
 # make sync
 ms 
 
-# pull remote MRAG-Bench results back to local
+# preview pull changes using pull_list.txt (no actual download)
+make pull
+
+# apply pull using pull_list.txt
+make pull y
+
+# preview/apply result artifacts via result.txt
+make pull result
+make pull result y
+
+# shortcut for: make pull result y
 mr
 ```
 
@@ -58,12 +62,13 @@ pip install hf_transfer
 # 00:04:11
 
 export HF_ENDPOINT=https://hf-mirror.com
-mkdir -p "$PWD/.cache/huggingface-mrag"/{hub,datasets}
+mkdir -p "$PWD/models/huggingface-mrag"/{hub,datasets}
 mkdir -p "$PWD/models"
 
 conda activate llava
 
 # 把 LLaVA-OneVision 模型单独下载到 mRAG/models，避免评估时边跑边下载。
+# 这一步也会预下载 MRAG-Bench 数据集和 vision tower 到 --hf-home 对应目录。
 python main.py \
   --model-local-dir ./models/llava-onevision-qwen2-7b-ov \
   --hf-home ./models/huggingface-mrag \
@@ -73,7 +78,7 @@ python main.py \
 
 cd github/MRAG-Bench && \
 CUDA_VISIBLE_DEVICES=0,1 \
-MRAG_HF_HOME="$PWD/.cache/huggingface-mrag" \
+MRAG_HF_HOME="$PWD/../../models/huggingface-mrag" \
 MRAG_MODEL_LOCAL_DIR="$PWD/../../models/llava-onevision-qwen2-7b-ov" \
 MRAG_NUM_BEAMS=5 \
 MRAG_MAX_NEW_TOKENS=64 \
@@ -84,10 +89,17 @@ bash eval/models/run_model.sh
 
 # 运行评估：若本地目录存在，run_model.sh 会优先使用本地模型。
 cd github/MRAG-Bench && \
-MRAG_HF_HOME="$PWD/.cache/huggingface-mrag" \
+MRAG_HF_HOME="$PWD/../../models/huggingface-mrag" \
 MRAG_MODEL_LOCAL_DIR="$PWD/../../models/llava-onevision-qwen2-7b-ov" \
 HF_HUB_ENABLE_HF_TRANSFER=0 \
 HF_ENDPOINT=https://hf-mirror.com \
+bash eval/models/run_model.sh
+
+# 纯离线节点运行（不允许联网）：
+cd github/MRAG-Bench && \
+MRAG_HF_HOME="$PWD/../../models/huggingface-mrag" \
+MRAG_MODEL_LOCAL_DIR="$PWD/../../models/llava-onevision-qwen2-7b-ov" \
+MRAG_HF_OFFLINE=1 \
 bash eval/models/run_model.sh
 
 cd ../../
@@ -278,6 +290,13 @@ cd github/magiclens/ && conda activate py310 && python inference.py \
 
 
 ```
+
+
+下载数据集和模型
+```bash
+bash test/data_models.sh 
+```
+
 
 ## VPN
 ```bash
