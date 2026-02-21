@@ -5,3 +5,6 @@
 
 github/MRAG-Bench/llava_one_vision_gt_rag_results.jsonl
 github/MRAG-Bench/results/
+log/one_sample_compare/sample0/report.md
+log/one_sample_compare/sample0/report.json
+log/

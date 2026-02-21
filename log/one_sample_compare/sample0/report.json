@@ -1,0 +1,106 @@
+{
+  "sample": {
+    "sample_index": 0,
+    "qs_id": "0",
+    "scenario": "Scope",
+    "aspect": "Perspective",
+    "gt_choice": "A",
+    "gt_answer": "silky_terrier",
+    "prompt_instruction": "You will be given one question concerning several images. The first image is the input image, others are retrieved examples to help you. Answer with the option's letter from the given choices directly. <image><image>\n",
+    "question_text": "Can you identify this animal?",
+    "options": {
+      "A": "silky_terrier",
+      "B": "Yorkshire_terrier",
+      "C": "Australian_terrier",
+      "D": "Cairn_terrier"
+    },
+    "images": [
+      {
+        "role": "query",
+        "path": "/public/home/hzh/mRAG/log/one_sample_compare/sample0/query.png",
+        "name": "query.png"
+      },
+      {
+        "role": "rag_top1",
+        "path": "/public/home/hzh/mRAG/log/one_sample_compare/sample0/rag_top1.png",
+        "name": "rag_top1.png"
+      }
+    ]
+  },
+  "llava_greedy": {
+    "source": "live",
+    "raw_output": "B",
+    "pred_choice": "B",
+    "num_beams": 1,
+    "max_new_tokens": 32,
+    "is_correct": false
+  },
+  "llava_beam": {
+    "source": "live",
+    "raw_output": "B",
+    "pred_choice": "B",
+    "num_beams": 5,
+    "max_new_tokens": 32,
+    "is_correct": false
+  },
+  "magiclens": {
+    "pred_choice": "B",
+    "option_scores": {
+      "A": 0.5155999660491943,
+      "B": 0.5373885631561279,
+      "C": 0.40042123198509216,
+      "D": 0.3662729561328888
+    },
+    "option_topk": {
+      "A": [
+        {
+          "rank": 1,
+          "image": "rag_top1.png",
+          "path": "/public/home/hzh/mRAG/log/one_sample_compare/sample0/rag_top1.png",
+          "score": 0.5155999660491943
+        }
+      ],
+      "B": [
+        {
+          "rank": 1,
+          "image": "rag_top1.png",
+          "path": "/public/home/hzh/mRAG/log/one_sample_compare/sample0/rag_top1.png",
+          "score": 0.5373885631561279
+        }
+      ],
+      "C": [
+        {
+          "rank": 1,
+          "image": "rag_top1.png",
+          "path": "/public/home/hzh/mRAG/log/one_sample_compare/sample0/rag_top1.png",
+          "score": 0.40042123198509216
+        }
+      ],
+      "D": [
+        {
+          "rank": 1,
+          "image": "rag_top1.png",
+          "path": "/public/home/hzh/mRAG/log/one_sample_compare/sample0/rag_top1.png",
+          "score": 0.3662729561328888
+        }
+      ]
+    },
+    "pred_choice_topk": [
+      {
+        "rank": 1,
+        "image": "rag_top1.png",
+        "path": "/public/home/hzh/mRAG/log/one_sample_compare/sample0/rag_top1.png",
+        "score": 0.5373885631561279
+      }
+    ],
+    "question_only_topk": [
+      {
+        "rank": 1,
+        "image": "rag_top1.png",
+        "path": "/public/home/hzh/mRAG/log/one_sample_compare/sample0/rag_top1.png",
+        "score": 0.25254344940185547
+      }
+    ],
+    "is_correct": false
+  }
+}

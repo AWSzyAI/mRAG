@@ -22,8 +22,11 @@ eval "$(make -s alias)"
 # scp AC:/home/database/2025/mRAG/pull_list.txt .
 # scp AC:/home/database/2025/mRAG/result.txt .
 
-# make sync
-ms 
+# preview sync changes (dry-run only)
+ms
+
+# apply sync (local -> remote)
+ms y
 
 # preview pull changes using pull_list.txt (no actual download)
 make pull
@@ -171,13 +174,10 @@ git clone https://github.com/google-research/scenic.git
 cd scenic
 pip install .
 pip install -r scenic/projects/baselines/clip/requirements.txt
-wget https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
-pip install --upgrade "jax[cuda12_pip]" -f jax_cuda_releases.html
-
-python -m pip install ftfy regex tqdm
-python -m pip install clip-anytorch
-python -m pip uninstall -y jax jaxlib jax-cuda12-plugin jax-cuda12-pjrt
-python -m pip install -U "jax[cuda12]"
+pip install --upgrade "jax[cuda12_pip]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
+pip install ftfy regex tqdm clip-anytorch
+pip uninstall -y jax jaxlib jax-cuda12-plugin jax-cuda12-pjrt
+pip install -U "jax[cuda12]"
 
 
 
@@ -190,7 +190,7 @@ make bpe
 # /home/user/code/mRAG/models/bpe_simple_vocab_16e6.txt.gz
 # predict_one.py / inference.py / predict_coco100_one.py 会优先从这里加载
 
-cd github/magiclens && JAX_PLATFORMS=cuda python predict_one.py \
+cd github/magiclens && conda activate llava && JAX_PLATFORMS=cuda python predict_one.py \
   --model_size base \
   --model_path ../../models/magic_lens_clip_base.pkl \
   --query_image ../../data/COCO2017_100/unlabeled2017/000000002505.jpg \

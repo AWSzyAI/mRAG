@@ -45,6 +45,12 @@ $(eval $(CMD_GOALS):;@:)
 endif
 endif
 
+ifneq ($(filter sync,$(MAKECMDGOALS)),)
+ifneq ($(strip $(CMD_GOALS)),)
+$(eval $(CMD_GOALS):;@:)
+endif
+endif
+
 
 define ensure_remote_sync_config
 	@if [ -z "$(SSH_HOST)" ] || [ -z "$(REMOTE_DIR)" ] || [ -z "$(CONDA_ENV)" ]; then \
@@ -61,19 +67,163 @@ endef
 
 
 sync:
-	@$(MAKE) sync-code
+	$(ensure_remote_sync_config)
+	@set -e; \
+	sync_args='$(CMD_GOALS)'; \
+	apply_mode=0; \
+	if [ "$(APPLY)" = "1" ] || [ "$(Y)" = "1" ]; then apply_mode=1; fi; \
+	for arg in $$sync_args; do \
+		case "$$arg" in \
+			y|yes|--yes|-y) apply_mode=1 ;; \
+		esac; \
+	done; \
+	if [ "$$apply_mode" -eq 1 ]; then \
+		echo "Mode: APPLY (sync local -> remote)"; \
+		$(MAKE) sync-code APPLY=1; \
+	else \
+		echo "Mode: PREVIEW (dry-run only)"; \
+		$(MAKE) sync-code; \
+	fi
 
 sync-code:
 	$(ensure_remote_sync_config)
-	@set -e; \
+	@set -e; set -o pipefail; \
 	filter_file="$$(mktemp)"; \
-	trap 'rm -f "$$filter_file"' EXIT; \
+	tmp_log="$$(mktemp)"; \
+	tmp_changes="$$(mktemp)"; \
+	tmp_upload="$$(mktemp)"; \
+	trap 'rm -f "$$filter_file" "$$tmp_log" "$$tmp_changes" "$$tmp_upload"' EXIT; \
 	awk -f scripts/build_rsync_filter.awk '$(EXCLUDE_FILE)' > "$$filter_file"; \
-	rsync -azP --delete \
-		--filter="merge $$filter_file" \
-		-e ssh \
-		'$(LOCAL_DIR)/' \
-			'$(SSH_HOST):$(REMOTE_DIR)/'
+	rsync_args='-az --partial --delete --itemize-changes --stats --human-readable -e ssh'; \
+	if [ "$(APPLY)" = "1" ]; then \
+		if ! rsync $$rsync_args --filter="merge $$filter_file" --info=stats2 \
+			'$(LOCAL_DIR)/' \
+			'$(SSH_HOST):$(REMOTE_DIR)/' > "$$tmp_log" 2>&1; then \
+			echo "[ERROR] rsync failed. Last lines:"; \
+			tail -n 40 "$$tmp_log"; \
+			exit 1; \
+		fi; \
+	else \
+		if ! rsync $$rsync_args --filter="merge $$filter_file" --dry-run \
+			'$(LOCAL_DIR)/' \
+			'$(SSH_HOST):$(REMOTE_DIR)/' > "$$tmp_log" 2>&1; then \
+			echo "[ERROR] rsync failed. Last lines:"; \
+			tail -n 40 "$$tmp_log"; \
+			exit 1; \
+		fi; \
+	fi; \
+	echo "---- changes (git style) ----"; \
+	awk '\
+		function is_itemized(tok) { \
+			return (tok ~ /^[<>ch\.][fdLDS][^ ]{10}$$/); \
+		} \
+		/^\*deleting[[:space:]]+/ { \
+			path = $$0; sub(/^\*deleting[[:space:]]+/, "", path); \
+			printf("-\t%s\n", path); \
+			next; \
+		} \
+		{ \
+			item = $$1; \
+			if (!is_itemized(item)) next; \
+			path = $$0; sub(/^[^ ]+[[:space:]]+/, "", path); \
+			if (substr(item, 1, 1) == ".") next; \
+			op = "~"; \
+			if (item ~ /\+\+\+\+\+\+\+\+\+/) op = "+"; \
+			printf("%s\t%s\n", op, path); \
+		} \
+	' "$$tmp_log" > "$$tmp_changes"; \
+	color_pref="$${MS_COLOR:-always}"; \
+	color_enabled=0; \
+	case "$$color_pref" in \
+		always|1|true|TRUE) color_enabled=1 ;; \
+		never|0|false|FALSE) color_enabled=0 ;; \
+		*) \
+			if [ -n "$${NO_COLOR-}" ] || [ -z "$${TERM-}" ] || [ "$${TERM}" = "dumb" ] || [ ! -t 1 ]; then \
+				color_enabled=0; \
+			else \
+				color_enabled=1; \
+			fi ;; \
+	esac; \
+	c_red=''; c_green=''; c_yellow=''; c_reset=''; \
+	if [ "$$color_enabled" -eq 1 ]; then \
+		c_red="$$(printf '\033[31m')"; \
+		c_green="$$(printf '\033[32m')"; \
+		c_yellow="$$(printf '\033[33m')"; \
+		c_reset="$$(printf '\033[0m')"; \
+	fi; \
+	while IFS=$$(printf '\t') read -r op rel; do \
+		[ -z "$$op" ] && continue; \
+		abs='$(LOCAL_DIR)'/"$$rel"; \
+		if [ -f "$$abs" ]; then \
+			b="$$(wc -c < "$$abs" | tr -d '[:space:]')"; \
+			size="$$(awk -v b="$$b" 'BEGIN { \
+				if (b >= 1024*1024*1024) printf "%.2fG", b/(1024*1024*1024); \
+				else if (b >= 1024*1024) printf "%.2fM", b/(1024*1024); \
+				else if (b >= 1024) printf "%.2fK", b/1024; \
+				else printf "%dB", b; \
+			}')"; \
+		else \
+			size="N/A"; \
+		fi; \
+		if [ "$$color_enabled" -eq 1 ]; then \
+			c="$$c_yellow"; \
+			case "$$op" in \
+				+) c="$$c_green" ;; \
+				-) c="$$c_red" ;; \
+			esac; \
+			printf "%b%s%b %b%s%b (%s)\n" "$$c" "$$op" "$$c_reset" "$$c" "$$rel" "$$c_reset" "$$size"; \
+		else \
+			echo "$$op $$rel ($$size)"; \
+		fi; \
+	done < "$$tmp_changes"; \
+	change_count="$$(wc -l < "$$tmp_changes" | tr -d '[:space:]')"; \
+	awk '\
+		function is_upload_file(tok) { \
+			return (tok ~ /^[<>ch]f[^ ]{10}$$/); \
+		} \
+		{ \
+			item = $$1; \
+			if (!is_upload_file(item)) next; \
+			path = $$0; sub(/^[^ ]+[[:space:]]+/, "", path); \
+			print path; \
+		} \
+	' "$$tmp_log" | sort -u > "$$tmp_upload"; \
+	files_changed=0; \
+	total_bytes=0; \
+	total_lines=0; \
+	while IFS= read -r rel; do \
+		[ -z "$$rel" ] && continue; \
+		abs='$(LOCAL_DIR)'/"$$rel"; \
+		if [ -f "$$abs" ]; then \
+			b="$$(wc -c < "$$abs" | tr -d '[:space:]')"; \
+			l="$$(wc -l < "$$abs" | tr -d '[:space:]')"; \
+			total_bytes=$$((total_bytes + b)); \
+			total_lines=$$((total_lines + l)); \
+			files_changed=$$((files_changed + 1)); \
+		fi; \
+	done < "$$tmp_upload"; \
+	human_size="$$(awk -v b="$$total_bytes" 'BEGIN { \
+		if (b >= 1024*1024*1024) printf "%.2fG", b/(1024*1024*1024); \
+		else if (b >= 1024*1024) printf "%.2fM", b/(1024*1024); \
+		else if (b >= 1024) printf "%.2fK", b/1024; \
+		else printf "%dB", b; \
+	}')"; \
+	rsync_file_count="$$(awk -F': ' '/^Number of regular files transferred:/ {print $$2; exit}' "$$tmp_log")"; \
+	rsync_tx_size="$$(awk -F': ' '/^Total transferred file size:/ {print $$2; exit}' "$$tmp_log")"; \
+	delete_warn_count="$$(grep -c '^cannot delete non-empty directory:' "$$tmp_log" || true)"; \
+	[ -z "$$rsync_file_count" ] && rsync_file_count=0; \
+	[ -z "$$rsync_tx_size" ] && rsync_tx_size=0B; \
+	echo "---- summary ----"; \
+	echo "Changed entries: $$change_count"; \
+	echo "Files to upload: $$files_changed"; \
+	echo "Code volume (upload files): $$human_size ($$total_bytes bytes)"; \
+	echo "Code lines (upload files): $$total_lines"; \
+	echo "Rsync regular files transferred: $$rsync_file_count"; \
+	echo "Rsync transferred file size: $$rsync_tx_size"; \
+	if [ "$$delete_warn_count" -gt 0 ]; then \
+		echo "[WARN] Failed directory deletions: $$delete_warn_count (directory still non-empty on remote)"; \
+		grep '^cannot delete non-empty directory:' "$$tmp_log" | sed -n '1,5p' | sed 's/^/[WARN] /'; \
+	fi
 
 pull:
 	$(ensure_remote_sync_config)
@@ -107,7 +257,9 @@ pull:
 	fi; \
 	tmp_list="$$(mktemp)"; \
 	tmp_log="$$(mktemp)"; \
-	trap 'rm -f "$$tmp_list" "$$tmp_log"' EXIT; \
+	tmp_changes="$$(mktemp)"; \
+	tmp_pull="$$(mktemp)"; \
+	trap 'rm -f "$$tmp_list" "$$tmp_log" "$$tmp_changes" "$$tmp_pull"' EXIT; \
 	awk '\
 		{ line=$$0; sub(/\r$$/, "", line); } \
 		/^[[:space:]]*$$/ { next } \
@@ -124,17 +276,127 @@ pull:
 	else \
 		echo "Mode: PREVIEW (dry-run only)"; \
 	fi; \
-	echo "---- rsync itemized changes ----"; \
-	rsync_args='-azP --itemize-changes --stats -e ssh --files-from'; \
+	rsync_args='-azPr --itemize-changes --stats -e ssh --files-from'; \
 	if [ "$$apply_mode" -eq 0 ]; then \
-		rsync $$rsync_args "$$tmp_list" --dry-run "$(SSH_HOST):$(REMOTE_DIR)/" "$(LOCAL_DIR)/" | tee "$$tmp_log"; \
+		if ! rsync $$rsync_args "$$tmp_list" --dry-run "$(SSH_HOST):$(REMOTE_DIR)/" "$(LOCAL_DIR)/" > "$$tmp_log" 2>&1; then \
+			echo "[ERROR] rsync failed. Last lines:"; \
+			tail -n 40 "$$tmp_log"; \
+			exit 1; \
+		fi; \
 	else \
-		rsync $$rsync_args "$$tmp_list" "$(SSH_HOST):$(REMOTE_DIR)/" "$(LOCAL_DIR)/" | tee "$$tmp_log"; \
+		if ! rsync $$rsync_args "$$tmp_list" "$(SSH_HOST):$(REMOTE_DIR)/" "$(LOCAL_DIR)/" > "$$tmp_log" 2>&1; then \
+			echo "[ERROR] rsync failed. Last lines:"; \
+			tail -n 40 "$$tmp_log"; \
+			exit 1; \
+		fi; \
 	fi; \
-	change_count="$$(awk '/^[<>ch\*\.][^ ]*[[:space:]]/ {n++} END {print n+0}' "$$tmp_log")"; \
+	echo "---- changes (git style) ----"; \
+	awk '\
+		function is_itemized(tok) { \
+			return (tok ~ /^[<>ch\.][fdLDS][^ ]{10}$$/); \
+		} \
+		/^\*deleting[[:space:]]+/ { \
+			path = $$0; sub(/^\*deleting[[:space:]]+/, "", path); \
+			printf("-\t%s\n", path); \
+			next; \
+		} \
+		{ \
+			item = $$1; \
+			if (!is_itemized(item)) next; \
+			path = $$0; sub(/^[^ ]+[[:space:]]+/, "", path); \
+			if (substr(item, 1, 1) == ".") next; \
+			op = "~"; \
+			if (item ~ /\+\+\+\+\+\+\+\+\+/) op = "+"; \
+			printf("%s\t%s\n", op, path); \
+		} \
+	' "$$tmp_log" > "$$tmp_changes"; \
+	color_pref="$${MS_COLOR:-always}"; \
+	color_enabled=0; \
+	case "$$color_pref" in \
+		always|1|true|TRUE) color_enabled=1 ;; \
+		never|0|false|FALSE) color_enabled=0 ;; \
+		*) \
+			if [ -n "$${NO_COLOR-}" ] || [ -z "$${TERM-}" ] || [ "$${TERM}" = "dumb" ] || [ ! -t 1 ]; then \
+				color_enabled=0; \
+			else \
+				color_enabled=1; \
+			fi ;; \
+	esac; \
+	c_red=''; c_green=''; c_yellow=''; c_reset=''; \
+	if [ "$$color_enabled" -eq 1 ]; then \
+		c_red="$$(printf '\033[31m')"; \
+		c_green="$$(printf '\033[32m')"; \
+		c_yellow="$$(printf '\033[33m')"; \
+		c_reset="$$(printf '\033[0m')"; \
+	fi; \
+	while IFS=$$(printf '\t') read -r op rel; do \
+		[ -z "$$op" ] && continue; \
+		abs='$(LOCAL_DIR)'/"$$rel"; \
+		if [ -f "$$abs" ]; then \
+			b="$$(wc -c < "$$abs" | tr -d '[:space:]')"; \
+			size="$$(awk -v b="$$b" 'BEGIN { \
+				if (b >= 1024*1024*1024) printf "%.2fG", b/(1024*1024*1024); \
+				else if (b >= 1024*1024) printf "%.2fM", b/(1024*1024); \
+				else if (b >= 1024) printf "%.2fK", b/1024; \
+				else printf "%dB", b; \
+			}')"; \
+		else \
+			size="N/A"; \
+		fi; \
+		if [ "$$color_enabled" -eq 1 ]; then \
+			c="$$c_yellow"; \
+			case "$$op" in \
+				+) c="$$c_green" ;; \
+				-) c="$$c_red" ;; \
+			esac; \
+			printf "%b%s%b %b%s%b (%s)\n" "$$c" "$$op" "$$c_reset" "$$c" "$$rel" "$$c_reset" "$$size"; \
+		else \
+			echo "$$op $$rel ($$size)"; \
+		fi; \
+	done < "$$tmp_changes"; \
+	change_count="$$(wc -l < "$$tmp_changes" | tr -d '[:space:]')"; \
+	awk '\
+		function is_pull_file(tok) { \
+			return (tok ~ /^[<>ch]f[^ ]{10}$$/); \
+		} \
+		{ \
+			item = $$1; \
+			if (!is_pull_file(item)) next; \
+			path = $$0; sub(/^[^ ]+[[:space:]]+/, "", path); \
+			print path; \
+		} \
+	' "$$tmp_log" | sort -u > "$$tmp_pull"; \
+	files_changed=0; \
+	total_bytes=0; \
+	total_lines=0; \
+	while IFS= read -r rel; do \
+		[ -z "$$rel" ] && continue; \
+		abs='$(LOCAL_DIR)'/"$$rel"; \
+		if [ -f "$$abs" ]; then \
+			b="$$(wc -c < "$$abs" | tr -d '[:space:]')"; \
+			l="$$(wc -l < "$$abs" | tr -d '[:space:]')"; \
+			total_bytes=$$((total_bytes + b)); \
+			total_lines=$$((total_lines + l)); \
+			files_changed=$$((files_changed + 1)); \
+		fi; \
+	done < "$$tmp_pull"; \
+	human_size="$$(awk -v b="$$total_bytes" 'BEGIN { \
+		if (b >= 1024*1024*1024) printf "%.2fG", b/(1024*1024*1024); \
+		else if (b >= 1024*1024) printf "%.2fM", b/(1024*1024); \
+		else if (b >= 1024) printf "%.2fK", b/1024; \
+		else printf "%dB", b; \
+	}')"; \
+	rsync_file_count="$$(awk -F': ' '/^Number of regular files transferred:/ {print $$2; exit}' "$$tmp_log")"; \
+	rsync_tx_size="$$(awk -F': ' '/^Total transferred file size:/ {print $$2; exit}' "$$tmp_log")"; \
+	[ -z "$$rsync_file_count" ] && rsync_file_count=0; \
+	[ -z "$$rsync_tx_size" ] && rsync_tx_size=0B; \
 	echo "---- summary ----"; \
 	echo "Changed entries: $$change_count"; \
-	grep -E 'Number of regular files transferred:|Total transferred file size:' "$$tmp_log" || true
+	echo "Files to pull: $$files_changed"; \
+	echo "Code volume (pulled files): $$human_size ($$total_bytes bytes)"; \
+	echo "Code lines (pulled files): $$total_lines"; \
+	echo "Rsync regular files transferred: $$rsync_file_count"; \
+	echo "Rsync transferred file size: $$rsync_tx_size"
 
 pull-role:
 	$(ensure_remote_sync_config)
