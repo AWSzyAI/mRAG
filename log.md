@@ -112,3 +112,10 @@
 ## 项目价值
 
 这个项目属于**视觉-语言AI前沿研究**，专注于评估多模态模型在复杂视觉检索场景下的能力，对于理解和改进多模态RAG系统具有重要意义。
+
+
+```bash
+CUDA_VISIBLE_DEVICES=0 LLAVA_DEVICE_MAP=cuda:0 TORCH_CUDA_REQUIRED=1 bash test/E4.sh
+CUDA_VISIBLE_DEVICES=0 LLAVA_DEVICE_MAP=cuda:0 JAX_CUDA_REQUIRED=1 TORCH_CUDA_REQUIRED=1 bash test/E5.sh >E5.log
+CUDA_VISIBLE_DEVICES=0 LLAVA_DEVICE_MAP=cuda:0 JAX_CUDA_REQUIRED=1 TORCH_CUDA_REQUIRED=1 bash test/E6.sh >E6.log
+```

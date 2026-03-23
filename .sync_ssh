@@ -2,13 +2,18 @@
 # Select one host in Makefile via:
 #   SYNC_HOST ?= featurize
 
-Host NNU
+Host nnu
   REMOTE_DIR ?= /home/user/code/mRAG
   CONDA_ENV ?= /home/user/env/envs/py310
 
 Host Ocean-NAT
   REMOTE_DIR ?= /public/home/hzh/mRAG
   CONDA_ENV ?= /public/home/hzh/.conda/envs/llava
+
+Host AB
+  REMOTE_DIR ?= /public/home/hzh/mRAG
+  CONDA_ENV ?= /public/home/hzh/.conda/envs/llava
+
 
 Host WSL
   REMOTE_DIR ?= /public/home/hzh/mRAG

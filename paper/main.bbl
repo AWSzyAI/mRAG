@@ -1,0 +1,83 @@
+\begin{thebibliography}{10}
+
+\bibitem{vaswani2017attention}
+Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakub Uszkoreit, Llion Jones, Aidan~N. Gomez, {\L}ukasz Kaiser, and Illia Polosukhin.
+\newblock Attention is all you need.
+\newblock {\em arXiv preprint arXiv:1706.03762}, 2017.
+
+\bibitem{minaee2024llm}
+Shervin Minaee, Tomas Mikolov, Narjes Nikzad, Meysam Chenaghlu, Richard Socher, Xavier Amatriain, and Jianfeng Gao.
+\newblock Large language models: A survey.
+\newblock {\em arXiv preprint arXiv:2402.06196}, 2024.
+
+\bibitem{lewis2020rag}
+Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio Petroni, Vladimir Karpukhin, Naman Goyal, Heinrich K{\"u}ttler, Mike Lewis, Yennie Yih, Tim Rockt{\"a}schel, Sebastian Riedel, and Douwe Kiela.
+\newblock Retrieval-augmented generation for knowledge-intensive nlp tasks.
+\newblock 33:9459--9474, 2020.
+
+\bibitem{gao2023rag}
+Yunfan Gao, Y.~Li, D.~Zhao, and H.~Su.
+\newblock Retrieval-augmented generation for large language models: A survey.
+\newblock {\em arXiv preprint arXiv:2312.10997}, 2023.
+
+\bibitem{mei2025multimodalrag}
+L.~Mei et~al.
+\newblock A survey of multimodal retrieval-augmented generation.
+\newblock {\em arXiv preprint arXiv:2504.08748}, 2025.
+
+\bibitem{abootorabi2025ask}
+M.M. Abootorabi et~al.
+\newblock Ask in any modality: A comprehensive survey on multimodal retrieval-augmented generation.
+\newblock {\em arXiv preprint arXiv:2502.08826}, 2025.
+
+\bibitem{hu2024mragbench}
+W.~Hu et~al.
+\newblock Mrag-bench: Vision-centric evaluation for retrieval-augmented multimodal models.
+\newblock {\em arXiv preprint arXiv:2410.08182}, 2024.
+
+\bibitem{radford2021clip}
+Alec Radford, Jong~Wook Kim, Chris Hallacy, Aditya Ramesh, Gabriel Goh, Sandhini Agarwal, Girish Sastry, Amanda Askell, Pamela Mishkin, Jack Clark, et~al.
+\newblock Learning transferable visual models from natural language supervision.
+\newblock In {\em International Conference on Machine Learning}, pages 8748--8763, 2021.
+
+\bibitem{xie2025fgclip}
+C.~Xie et~al.
+\newblock Fg-clip: Fine-grained visual and textual alignment.
+\newblock {\em arXiv preprint arXiv:2505.05071}, 2025.
+
+\bibitem{zhang2024longclip}
+Beichen Zhang, Pan Zhang, Xiaoyi Dong, Yuhang Zang, and Jiaqi Wang.
+\newblock Long-clip: Unlocking the long-text capability of clip.
+\newblock {\em arXiv preprint arXiv:2403.15378}, 2024.
+
+\bibitem{ma2022eiclip}
+H.~Ma et~al.
+\newblock Ei-clip: Entity-aware interventional contrastive learning for e-commerce cross-modal retrieval.
+\newblock In {\em Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition}, pages 21991--22000, 2022.
+
+\bibitem{zhang2024magiclens}
+K.~Zhang et~al.
+\newblock Magiclens: Self-supervised image retrieval with open-ended instructions.
+\newblock {\em arXiv preprint arXiv:2403.19651}, 2024.
+
+\bibitem{nichol2022glide}
+Alex Nichol, Prafulla Dhariwal, Aditya Ramesh, Pranav Shyam, Pamela Mishkin, Bob McGrew, Ilya Sutskever, and Mark Chen.
+\newblock Glide: Towards photorealistic image generation and editing with text-guided diffusion models.
+\newblock {\em arXiv preprint arXiv:2112.10741}, 2022.
+
+\bibitem{rombach2022stable}
+Robin Rombach, Andreas Blattmann, Dominik Lorenz, Patrick Esser, and Bj{\"o}rn Ommer.
+\newblock High-resolution image synthesis with latent diffusion models.
+\newblock In {\em Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition}, pages 10684--10695, 2022.
+
+\bibitem{zhang2023controlnet}
+Lvmin Zhang and Maneesh Agrawala.
+\newblock Adding conditional control to text-to-image diffusion models.
+\newblock In {\em Proceedings of the IEEE/CVF International Conference on Computer Vision}, pages 3836--3847, 2023.
+
+\bibitem{tian2023stablerep}
+Y.~Tian et~al.
+\newblock Stablerep: Synthetic images from text-to-image models for visual representation learning.
+\newblock {\em arXiv preprint arXiv:2306.00984}, 2023.
+
+\end{thebibliography}

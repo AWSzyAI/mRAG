@@ -1,0 +1,26 @@
+{
+  "answers_file": "/public/home/hzh/mRAG/github/MRAG-Bench/magiclens_gt_rag_results.jsonl",
+  "total_processed": 1353,
+  "overall_accuracy": 43.31,
+  "max_rag_images": 3,
+  "by_scenario": {
+    "Scope": 48.04,
+    "Obstruction": 56.48,
+    "Temporal": 52.35,
+    "Deformation": 33.33,
+    "Biological": 20.59,
+    "Angle": 50.62,
+    "Partial": 47.97,
+    "Incomplete": 24.51,
+    "Others": 30.83
+  },
+  "reference_compare": {
+    "reference_file": "/public/home/hzh/mRAG/github/MRAG-Bench/llava_one_vision_gt_rag_results.jsonl",
+    "overlap_samples": 1353,
+    "agree_count": 574,
+    "agree_rate": 42.42,
+    "reference_accuracy": 59.2,
+    "magiclens_accuracy_on_overlap": 43.31,
+    "accuracy_delta_vs_reference": -15.89
+  }
+}

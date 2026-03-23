@@ -1,0 +1,94 @@
+{
+  "total_samples": 1353,
+  "avg_unique_gt_count": 4.686622320768662,
+  "avg_unique_retrieved_count": 4.946784922394679,
+  "avg_intersection_count": 1.114560236511456,
+  "avg_recall_gt_in_retrieved": 0.22779009608277784,
+  "avg_precision_retrieved_in_gt": 0.22435328898743417,
+  "samples_no_overlap": 597,
+  "samples_any_overlap": 756,
+  "samples_full_cover_gt_subset_retrieved": 31,
+  "samples_exact_set_match": 25,
+  "intersection_distribution": {
+    "0": 597,
+    "1": 327,
+    "2": 208,
+    "3": 143,
+    "4": 54,
+    "5": 24
+  },
+  "by_scenario": {
+    "Angle": {
+      "n": 322,
+      "no_overlap": 96,
+      "full_cover": 9,
+      "exact_match": 9,
+      "avg_recall": 0.27841614906832346,
+      "avg_precision": 0.27857142857142914
+    },
+    "Biological": {
+      "n": 102,
+      "no_overlap": 61,
+      "full_cover": 0,
+      "exact_match": 0,
+      "avg_recall": 0.12352941176470583,
+      "avg_precision": 0.12352941176470583
+    },
+    "Deformation": {
+      "n": 102,
+      "no_overlap": 70,
+      "full_cover": 0,
+      "exact_match": 0,
+      "avg_recall": 0.09411764705882353,
+      "avg_precision": 0.096078431372549
+    },
+    "Incomplete": {
+      "n": 102,
+      "no_overlap": 95,
+      "full_cover": 7,
+      "exact_match": 1,
+      "avg_recall": 0.06862745098039216,
+      "avg_precision": 0.027941176470588233
+    },
+    "Obstruction": {
+      "n": 108,
+      "no_overlap": 29,
+      "full_cover": 6,
+      "exact_match": 6,
+      "avg_recall": 0.3569444444444444,
+      "avg_precision": 0.3537037037037037
+    },
+    "Others": {
+      "n": 120,
+      "no_overlap": 22,
+      "full_cover": 0,
+      "exact_match": 0,
+      "avg_recall": 0.32166666666666693,
+      "avg_precision": 0.32166666666666693
+    },
+    "Partial": {
+      "n": 246,
+      "no_overlap": 112,
+      "full_cover": 2,
+      "exact_match": 2,
+      "avg_recall": 0.21077235772357736,
+      "avg_precision": 0.20975609756097577
+    },
+    "Scope": {
+      "n": 102,
+      "no_overlap": 29,
+      "full_cover": 5,
+      "exact_match": 5,
+      "avg_recall": 0.3151960784313725,
+      "avg_precision": 0.3137254901960783
+    },
+    "Temporal": {
+      "n": 149,
+      "no_overlap": 83,
+      "full_cover": 2,
+      "exact_match": 2,
+      "avg_recall": 0.1892617449664429,
+      "avg_precision": 0.1892617449664429
+    }
+  }
+}

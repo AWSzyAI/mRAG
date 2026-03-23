@@ -1,0 +1,33 @@
+{
+  "answers_file": "/public/home/hzh/mRAG/github/MRAG-Bench/magiclens_rerank_llava_results.jsonl",
+  "total_processed": 1353,
+  "overall_accuracy": 60.16,
+  "mode": "magiclens_rerank_plus_llava_answer",
+  "max_rag_images": 5,
+  "llava_model_path": "/public/home/hzh/mRAG/models/llava-onevision-qwen2-7b-ov",
+  "llava_num_beams": 1,
+  "llava_max_new_tokens": 64,
+  "magiclens_rerank_disabled": false,
+  "magiclens_disable_jit": true,
+  "magiclens_clear_cache_every": 200,
+  "by_scenario": {
+    "Scope": 66.67,
+    "Obstruction": 69.44,
+    "Temporal": 58.39,
+    "Deformation": 57.84,
+    "Biological": 55.88,
+    "Angle": 61.49,
+    "Partial": 65.45,
+    "Incomplete": 30.39,
+    "Others": 65.0
+  },
+  "reference_compare": {
+    "reference_file": "/public/home/hzh/mRAG/github/MRAG-Bench/llava_one_vision_gt_rag_results.jsonl",
+    "overlap_samples": 1353,
+    "agree_count": 1245,
+    "agree_rate": 92.02,
+    "reference_accuracy": 59.2,
+    "run_accuracy_on_overlap": 60.16,
+    "accuracy_delta_vs_reference": 0.96
+  }
+}

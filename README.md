@@ -1,6 +1,29 @@
 # mRAG
 using magiclens to MRAG-BENCH
 
+## 实验线说明
+
+当前项目中与 corpus 检索相关的实验线如下：
+
+- `E3`：`CLIP` 从完整 `corpus` 中召回 `Top-K`，不使用 MagicLens 重排。
+- `E6`：`CLIP` 从完整 `corpus` 中召回 `Top-K`，再由 `MagicLens` 对候选进行 rerank。
+- `E7`：`MagicLens` 直接在完整 `corpus` 上召回 `Top-K`，不经过 CLIP 粗召回。
+
+对应脚本：
+
+- `test/E4.sh`
+- `test/E5.sh`
+- `test/E3.sh`
+- `test/E6.sh`
+- `test/E7.sh`
+
+开跑前可先做预检查：
+
+- `test/E4_preflight.sh`
+- `test/E5_preflight.sh`
+- `test/E6_preflight.sh`
+- `test/E7_preflight.sh`
+
 
 ## rsync
 NNU服务器（VScode Remote-SSH）无法使用CodeX，Claude Code，只能在本地改代码，在服务器上运行。

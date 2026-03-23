@@ -1,0 +1,27 @@
+{
+  "dataset_name": "uclanlp/MRAG-Bench",
+  "processed": 1353,
+  "correct": 681,
+  "accuracy": 50.33,
+  "top_k": 5,
+  "retriever_type": "clip",
+  "clip_model_name": "openai/clip-vit-base-patch32",
+  "magiclens_model_size": null,
+  "corpus_dir": "/public/home/hzh/mRAG/data/image_corpus",
+  "magiclens_rerank_enabled": true,
+  "by_scenario_accuracy": {
+    "Scope": 55.88,
+    "Obstruction": 51.85,
+    "Temporal": 46.31,
+    "Deformation": 56.86,
+    "Biological": 49.02,
+    "Angle": 54.04,
+    "Partial": 49.19,
+    "Incomplete": 27.45,
+    "Others": 56.67
+  },
+  "reference_overlap": 1353,
+  "reference_agreement": 90.84,
+  "reference_accuracy": 50.41,
+  "run_accuracy_on_overlap": 50.33
+}

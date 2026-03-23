@@ -1,0 +1,69 @@
+{
+  "source": "results_jsonl:log/实验2-magiclens不用GT真RAG/magiclens_rerank_llava_retrieved_rag_results.jsonl",
+  "split": "test",
+  "total_samples": 1353,
+  "question_image_count": {},
+  "question_image_types": {},
+  "gt_images_count_raw": {},
+  "gt_images_count_after_incomplete_rule": {},
+  "retrieved_images_count": {
+    "1": 102,
+    "5": 1251
+  },
+  "per_scenario": {
+    "Angle": {
+      "total": 322,
+      "question_images": {},
+      "gt_images_raw": {},
+      "gt_images_after_incomplete_rule": {}
+    },
+    "Biological": {
+      "total": 102,
+      "question_images": {},
+      "gt_images_raw": {},
+      "gt_images_after_incomplete_rule": {}
+    },
+    "Deformation": {
+      "total": 102,
+      "question_images": {},
+      "gt_images_raw": {},
+      "gt_images_after_incomplete_rule": {}
+    },
+    "Incomplete": {
+      "total": 102,
+      "question_images": {},
+      "gt_images_raw": {},
+      "gt_images_after_incomplete_rule": {}
+    },
+    "Obstruction": {
+      "total": 108,
+      "question_images": {},
+      "gt_images_raw": {},
+      "gt_images_after_incomplete_rule": {}
+    },
+    "Others": {
+      "total": 120,
+      "question_images": {},
+      "gt_images_raw": {},
+      "gt_images_after_incomplete_rule": {}
+    },
+    "Partial": {
+      "total": 246,
+      "question_images": {},
+      "gt_images_raw": {},
+      "gt_images_after_incomplete_rule": {}
+    },
+    "Scope": {
+      "total": 102,
+      "question_images": {},
+      "gt_images_raw": {},
+      "gt_images_after_incomplete_rule": {}
+    },
+    "Temporal": {
+      "total": 149,
+      "question_images": {},
+      "gt_images_raw": {},
+      "gt_images_after_incomplete_rule": {}
+    }
+  }
+}

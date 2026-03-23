@@ -1,0 +1,24 @@
+# Paths to pull from remote (relative to project root).
+# Usage:
+#   make pull                # preview with this list
+#   make pull y              # apply
+#
+# You can also create named lists, e.g. result.txt:
+#   make pull result         # preview
+#   make pull result y       # apply
+
+# Example code paths:
+Makefile
+main.py
+scripts/build_rsync_filter.awk
+scripts/read_sync_value.awk
+README.md
+README/PROJECT.md
+README/ARCHITECTURE.md
+README/DECISIONS.md
+
+# Example outputs:
+github/MRAG-Bench/llava_one_vision_gt_rag_results.jsonl
+github/MRAG-Bench/results/
+log/
+results/

@@ -1,0 +1,198 @@
+\begin{thebibliography}{10}
+
+\bibitem{vaswani2017attention}
+Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakub Uszkoreit, Llion Jones,
+  Aidan~N. Gomez, {\L}ukasz Kaiser, and Illia Polosukhin.
+\newblock Attention is all you need.
+\newblock {\em arXiv preprint arXiv:1706.03762}, 2017.
+
+\bibitem{minaee2024llm}
+Shervin Minaee, Tomas Mikolov, Narjes Nikzad, Meysam Chenaghlu, Richard Socher,
+  Xavier Amatriain, and Jianfeng Gao.
+\newblock Large language models: A survey.
+\newblock {\em arXiv preprint arXiv:2402.06196}, 2024.
+
+\bibitem{wei2022cot}
+Jason Wei, Xuezhi Wang, Dale Schuurmans, Maarten Bosma, Ed~Chi, Quoc Le, and
+  Denny Zhou.
+\newblock Chain-of-thought prompting elicits reasoning in large language
+  models.
+\newblock In {\em Advances in Neural Information Processing Systems}, 2022.
+
+\bibitem{lewis2020rag}
+Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio Petroni, Vladimir
+  Karpukhin, Naman Goyal, Heinrich K{\"u}ttler, Mike Lewis, Yennie Yih, Tim
+  Rockt{\"a}schel, Sebastian Riedel, and Douwe Kiela.
+\newblock Retrieval-augmented generation for knowledge-intensive nlp tasks.
+\newblock 33:9459--9474, 2020.
+
+\bibitem{dify2023}
+LangGenius.
+\newblock Dify: Open source llmops platform for building llm applications.
+\newblock 2023.
+
+\bibitem{shen2025manus}
+Minjie Shen, Yanshu Li, et~al.
+\newblock From mind to machine: The rise of manus ai as a fully autonomous
+  digital agent.
+\newblock {\em arXiv preprint arXiv:2505.02024}, 2025.
+
+\bibitem{wang2023agent}
+Lei Wang, Chen Ma, Xinuo Feng, Xingyu Su, Ruochen Zhang, Roy Xu, Yufeng Niu,
+  Shan An, et~al.
+\newblock A survey on large language model based autonomous agents.
+\newblock {\em arXiv preprint arXiv:2308.11432}, 2023.
+
+\bibitem{anthropic2024claudecode}
+Anthropic.
+\newblock Claude code: Anthropic's ai-powered coding assistant.
+\newblock 2024.
+
+\bibitem{anthropic2024mcp}
+Anthropic.
+\newblock Introducing the model context protocol.
+\newblock 2024.
+
+\bibitem{langchain2024skills}
+LangChain.
+\newblock Langchain state of ai agents report.
+\newblock 2024.
+
+\bibitem{clawdbot2025}
+Clawdbot Team.
+\newblock Clawdbot: Open-source personal ai assistant.
+\newblock 2025.
+
+\bibitem{gao2023rag}
+Yunfan Gao, Y.~Li, D.~Zhao, and H.~Su.
+\newblock Retrieval-augmented generation for large language models: A survey.
+\newblock {\em arXiv preprint arXiv:2312.10997}, 2023.
+
+\bibitem{mei2025multimodalrag}
+L.~Mei et~al.
+\newblock A survey of multimodal retrieval-augmented generation.
+\newblock {\em arXiv preprint arXiv:2504.08748}, 2025.
+
+\bibitem{abootorabi2025ask}
+M.M. Abootorabi et~al.
+\newblock Ask in any modality: A comprehensive survey on multimodal
+  retrieval-augmented generation.
+\newblock {\em arXiv preprint arXiv:2502.08826}, 2025.
+
+\bibitem{li2023pope}
+Y.~Li, Y.~Du, L.~Zhou, S.~Huang, et~al.
+\newblock Evaluating object hallucination in large vision-language models.
+\newblock In {\em Proceedings of the 2023 Conference on Empirical Methods in
+  Natural Language Processing}, pages 313--331, 2023.
+
+\bibitem{xie2024embodiedrag}
+T.~Xie, W.~Li, and et~al. Wang, Y.
+\newblock Embodied-rag: General non-parametric embodied memory for retrieval
+  and generation.
+\newblock {\em arXiv preprint arXiv:2409.18313}, 2024.
+
+\bibitem{mon2024ellmer}
+M.~Mon-Williams et~al.
+\newblock Embodied large language models enable robots to complete complex
+  tasks in unpredictable environments.
+\newblock {\em Nature Machine Intelligence}, 2025.
+
+\bibitem{caria2025bci}
+A.~Carìa et~al.
+\newblock Towards predictive communication: The fusion of large language models
+  and brain--computer interface.
+\newblock {\em Sensors}, 25(13):3987, 2025.
+
+\bibitem{zhao2025memoryrecall}
+Yuxiao Zhao, Guohua Dong, Lei Zhu, and Xiaomin Ying.
+\newblock Memory recall: Retrieval-augmented mind reconstruction for brain
+  decoding.
+\newblock {\em Information Fusion}, 123:103280, 2025.
+
+\bibitem{genesis2025}
+Research Team.
+\newblock Genesis: A generative model of episodic-semantic interaction.
+\newblock {\em arXiv preprint arXiv:2510.15828}, 2025.
+
+\bibitem{zhao2025windsock}
+S.~Zhao, T.~Shen, N.~Ahuja, and et~al. Tickoo, O.
+\newblock Windsock is dancing: Adaptive multimodal retrieval-augmented
+  generation.
+\newblock {\em arXiv preprint arXiv:2510.22694}, 2025.
+
+\bibitem{radford2021clip}
+Alec Radford, Jong~Wook Kim, Chris Hallacy, Aditya Ramesh, Gabriel Goh,
+  Sandhini Agarwal, Girish Sastry, Amanda Askell, Pamela Mishkin, Jack Clark,
+  et~al.
+\newblock Learning transferable visual models from natural language
+  supervision.
+\newblock In {\em International Conference on Machine Learning}, pages
+  8748--8763, 2021.
+
+\bibitem{gomez2021align}
+Aidan Gomez et~al.
+\newblock Align: Scaling up visual and vision-language representation learning
+  with noisy text supervision.
+\newblock {\em Google Research Blog}, 2021.
+
+\bibitem{xie2025fgclip}
+C.~Xie et~al.
+\newblock Fg-clip: Fine-grained visual and textual alignment.
+\newblock {\em arXiv preprint arXiv:2505.05071}, 2025.
+
+\bibitem{zhang2024longclip}
+Beichen Zhang, Pan Zhang, Xiaoyi Dong, Yuhang Zang, and Jiaqi Wang.
+\newblock Long-clip: Unlocking the long-text capability of clip.
+\newblock {\em arXiv preprint arXiv:2403.15378}, 2024.
+
+\bibitem{ma2022eiclip}
+H.~Ma et~al.
+\newblock Ei-clip: Entity-aware interventional contrastive learning for
+  e-commerce cross-modal retrieval.
+\newblock In {\em Proceedings of the IEEE/CVF Conference on Computer Vision and
+  Pattern Recognition}, pages 21991--22000, 2022.
+
+\bibitem{zhang2024magiclens}
+K.~Zhang et~al.
+\newblock Magiclens: Self-supervised image retrieval with open-ended
+  instructions.
+\newblock {\em arXiv preprint arXiv:2403.19651}, 2024.
+
+\bibitem{nichol2022glide}
+Alex Nichol, Prafulla Dhariwal, Aditya Ramesh, Pranav Shyam, Pamela Mishkin,
+  Bob McGrew, Ilya Sutskever, and Mark Chen.
+\newblock Glide: Towards photorealistic image generation and editing with
+  text-guided diffusion models.
+\newblock {\em arXiv preprint arXiv:2112.10741}, 2022.
+
+\bibitem{rombach2022stable}
+Robin Rombach, Andreas Blattmann, Dominik Lorenz, Patrick Esser, and Bj{\"o}rn
+  Ommer.
+\newblock High-resolution image synthesis with latent diffusion models.
+\newblock In {\em Proceedings of the IEEE/CVF Conference on Computer Vision and
+  Pattern Recognition}, pages 10684--10695, 2022.
+
+\bibitem{chen2022pali}
+Xi~Chen et~al.
+\newblock Pali: A jointly-scaled multilingual language-image model.
+\newblock {\em arXiv preprint arXiv:2209.06794}, 2022.
+
+\bibitem{zhang2023controlnet}
+Lvmin Zhang and Maneesh Agrawala.
+\newblock Adding conditional control to text-to-image diffusion models.
+\newblock In {\em Proceedings of the IEEE/CVF International Conference on
+  Computer Vision}, pages 3836--3847, 2023.
+
+\bibitem{tian2023stablerep}
+Y.~Tian et~al.
+\newblock Stablerep: Synthetic images from text-to-image models for visual
+  representation learning.
+\newblock {\em arXiv preprint arXiv:2306.00984}, 2023.
+
+\bibitem{hu2024mragbench}
+W.~Hu et~al.
+\newblock Mrag-bench: Vision-centric evaluation for retrieval-augmented
+  multimodal models.
+\newblock {\em arXiv preprint arXiv:2410.08182}, 2024.
+
+\end{thebibliography}

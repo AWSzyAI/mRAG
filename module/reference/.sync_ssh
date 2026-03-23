@@ -1,0 +1,24 @@
+# Sync profiles used by Makefile.
+# Select one host in Makefile via:
+#   SYNC_HOST ?= featurize
+
+Host NNU
+  REMOTE_DIR ?= /home/user/code/mRAG
+  CONDA_ENV ?= /home/user/env/envs/py310
+
+Host Ocean-NAT
+  REMOTE_DIR ?= /public/home/hzh/mRAG
+  CONDA_ENV ?= /public/home/hzh/.conda/envs/llava
+
+Host WSL
+  REMOTE_DIR ?= /public/home/hzh/mRAG
+  CONDA_ENV ?= /public/home/hzh/.conda/envs/llava
+
+
+Host AC
+  REMOTE_DIR ?= /home/acszy/2026/mRAG
+  CONDA_ENV ?= /environment/miniconda3/envs/llava
+
+Host featurize
+  REMOTE_DIR ?= /home/featurize/work/mRAG
+  CONDA_ENV ?= /environment/miniconda3/envs/llava

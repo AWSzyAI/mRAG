@@ -1,0 +1,110 @@
+参考文献（按正文引用顺序，GB/T 7714格式）
+
+================================================================================
+
+[1] VASWANI A, SHAZEER N, PARMAR N, USZKOREIT J, JONES L, GOMEZ A N, KAISER L, POLOSUKHIN I. Attention is all you need[J/OL]. arXiv preprint arXiv:1706.03762, 2017. https://arxiv.org/abs/1706.03762.
+
+[2] MINAEE S, MIKOLOV T, NIKZAD N, CHENAGHLU M, SOCHER R, AMATRAIN X, GAO J. Large language models: A survey[J/OL]. arXiv preprint arXiv:2402.06196, 2024. https://arxiv.org/abs/2402.06196.
+
+[3] WEI J, WANG X, SCHUURMANS D, BOSMA M, CHI E, LE Q, ZHOU D. Chain-of-thought prompting elicits reasoning in large language models[C/OL]//Advances in Neural Information Processing Systems. 2022. https://arxiv.org/abs/2201.11903.
+
+[4] LEWIS P, PEREZ E, PIKTUS A, PETRONI F, KARPUKHIN V, GOYAL N, KUTTLER H, LEWIS M, YIH Y, ROCKTASCHEL T, RIEDEL S, KIELA D. Retrieval-augmented generation for knowledge-intensive NLP tasks[C/OL]//Advances in Neural Information Processing Systems. 2020, 33: 9459-9474. https://arxiv.org/abs/2005.11401.
+
+[5] LANGGENIUS. Dify: Open source LLMOps platform for building LLM applications[EB/OL]. 2023. https://github.com/langgenius/dify.
+
+[6] SHEN M, LI Y, et al. From mind to machine: The rise of Manus AI as a fully autonomous digital agent[J/OL]. arXiv preprint arXiv:2505.02024, 2025. https://arxiv.org/abs/2505.02024.
+
+[7] WANG L, MA C, FENG X, SU X, ZHANG R, XU R, NIU Y, AN S, et al. A survey on large language model based autonomous agents[J/OL]. arXiv preprint arXiv:2308.11432, 2023. https://arxiv.org/abs/2308.11432.
+
+[8] ANTHROPIC. Claude Code: Anthropic's AI-powered coding assistant[EB/OL]. 2024. https://www.anthropic.com/claude-code.
+
+[9] ANTHROPIC. Introducing the model context protocol[EB/OL]. 2024. https://www.anthropic.com/news/model-context-protocol.
+
+[10] LANGCHAIN. LangChain state of AI agents report[EB/OL]. 2024. https://www.langchain.com/stateofaiagents.
+
+[11] CLAWDBOT TEAM. Clawdbot: Open-source personal AI assistant[EB/OL]. 2025. https://github.com/clawdbot.
+
+[12] GAO Y, LI Y, ZHAO D, SU H. Retrieval-augmented generation for large language models: A survey[J/OL]. arXiv preprint arXiv:2312.10997, 2023. https://arxiv.org/abs/2312.10997.
+
+[13] MEI L, et al. A survey of multimodal retrieval-augmented generation[J/OL]. arXiv preprint arXiv:2504.08748, 2025. https://arxiv.org/abs/2504.08748.
+
+[14] ABOOTORABI M M, et al. Ask in any modality: A comprehensive survey on multimodal retrieval-augmented generation[J/OL]. arXiv preprint arXiv:2502.08826, 2025. https://arxiv.org/abs/2502.08826.
+
+[15] LI Y, DU Y, ZHOU L, HUANG S, et al. Evaluating object hallucination in large vision-language models[C/OL]//Proceedings of the 2023 Conference on Empirical Methods in Natural Language Processing. 2023: 313-331. https://arxiv.org/abs/2305.10355.
+
+[16] XIE T, LI W, WANG Y, et al. Embodied-RAG: General non-parametric embodied memory for retrieval and generation[J/OL]. arXiv preprint arXiv:2409.18313, 2024. https://arxiv.org/abs/2409.18313.
+
+[17] MON-WILLIAMS M, et al. Embodied large language models enable robots to complete complex tasks in unpredictable environments[J/OL]. Nature Machine Intelligence, 2025. DOI: 10.1038/s42256-025-01005-x. https://www.nature.com/articles/s42256-025-01005-x.
+
+[18] CARIA A, et al. Towards predictive communication: The fusion of large language models and brain–computer interface[J/OL]. Sensors, 2025, 25(13): 3987. DOI: 10.3390/s25133987. https://www.mdpi.com/1424-8220/25/13/3987.
+
+[19] ZHAO Y, DONG G, ZHU L, YING X. Memory recall: Retrieval-augmented mind reconstruction for brain decoding[J/OL]. Information Fusion, 2025, 123: 103280. https://www.sciencedirect.com/science/article/pii/S1566253525003537.
+
+[20] RESEARCH TEAM. GENESIS: A generative model of episodic-semantic interaction[J/OL]. arXiv preprint arXiv:2510.15828, 2025. https://arxiv.org/abs/2510.15828.
+
+[21] ZHAO S, SHEN T, AHUJA N, TICKOO O, et al. Windsock is dancing: Adaptive multimodal retrieval-augmented generation[J/OL]. arXiv preprint arXiv:2510.22694, 2025. https://arxiv.org/abs/2510.22694.
+
+[22] RADFORD A, KIM J W, HALLACY C, RAMESH A, GOH G, AGARWAL S, SASTRY G, ASKELL A, MISHKIN P, CLARK J, et al. Learning transferable visual models from natural language supervision[C/OL]//Proceedings of the International Conference on Machine Learning. 2021: 8748-8763. https://arxiv.org/abs/2103.00020.
+
+[23] GOMEZ A, et al. ALIGN: Scaling up visual and vision-language representation learning with noisy text supervision[EB/OL]. Google Research Blog, 2021. https://research.google/blog/align-scaling-up-visual-and-vision-language-representation-learning-with-noisy-text-supervision/.
+
+[24] XIE C, et al. FG-CLIP: Fine-grained visual and textual alignment[J/OL]. arXiv preprint arXiv:2505.05071, 2025. https://arxiv.org/abs/2505.05071.
+
+[25] ZHANG B, ZHANG P, DONG X, ZANG Y, WANG J. Long-CLIP: Unlocking the long-text capability of CLIP[J/OL]. arXiv preprint arXiv:2403.15378, 2024. https://arxiv.org/abs/2403.15378.
+
+[26] MA H, et al. EI-CLIP: Entity-aware interventional contrastive learning for e-commerce cross-modal retrieval[C/OL]//Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition. 2022: 21991-22000. https://openaccess.thecvf.com/content/CVPR2022/papers/Ma_EI-CLIP_Entity-Aware_Interventional_Contrastive_Learning_for_E-Commerce_Cross-Modal_Retrieval_CVPR_2022_paper.pdf.
+
+[27] ZHANG K, et al. MagicLens: Self-supervised image retrieval with open-ended instructions[J/OL]. arXiv preprint arXiv:2403.19651, 2024. https://arxiv.org/abs/2403.19651.
+
+[28] NICHOL A, DHARIWAL P, RAMESH A, SHYAM P, MISHKIN P, MCGREW B, SUTSKEVER I, CHEN M. GLIDE: Towards photorealistic image generation and editing with text-guided diffusion models[J/OL]. arXiv preprint arXiv:2112.10741, 2022. https://arxiv.org/abs/2112.10741.
+
+[29] ROMBACH R, BLATTMANN A, LORENZ D, ESSER P, OMMER B. High-resolution image synthesis with latent diffusion models[C/OL]//Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition. 2022: 10684-10695. https://arxiv.org/abs/2112.10752.
+
+[30] CHEN X, et al. PaLI: A jointly-scaled multilingual language-image model[J/OL]. arXiv preprint arXiv:2209.06794, 2022. https://arxiv.org/abs/2209.06794.
+
+[31] ZHANG L, AGRAWALA M. Adding conditional control to text-to-image diffusion models[C/OL]//Proceedings of the IEEE/CVF International Conference on Computer Vision. 2023: 3836-3847. https://arxiv.org/abs/2302.05543.
+
+[32] TIAN Y, et al. StableRep: Synthetic images from text-to-image models for visual representation learning[J/OL]. arXiv preprint arXiv:2306.00984, 2023. https://arxiv.org/abs/2306.00984.
+
+[33] HU W, et al. MRAG-Bench: Vision-centric evaluation for retrieval-augmented multimodal models[J/OL]. arXiv preprint arXiv:2410.08182, 2024. https://arxiv.org/abs/2410.08182.
+
+[34] ZHAO S, SHEN T, AHUJA N, TICKOO O, et al. Windsock is dancing: Adaptive multimodal retrieval-augmented generation[J/OL]. arXiv preprint arXiv:2510.22694, 2025. https://arxiv.org/abs/2510.22694.
+
+================================================================================
+关键词对应关系：
+[1] Attention Is All You Need (Transformer)
+[2] Large Language Models: A Survey (LLM综述)
+[3] Chain-of-Thought Prompting (思维链)
+[4] RAG for Knowledge-Intensive NLP (RAG原始论文)
+[5] Dify (LLMOps框架)
+[6] Manus AI (Manus智能体)
+[7] LLM-based Autonomous Agents (Agent综述)
+[8] Claude Code (Claude代码助手)
+[9] MCP (Model Context Protocol)
+[10] LangChain Skills (LangChain技能报告)
+[11] Clawdbot (个人AI助手)
+[12] RAG for LLMs (RAG综述)
+[13] A Survey of Multimodal RAG (多模态RAG综述)
+[14] Ask in Any Modality (多模态RAG综述)
+[15] POPE (幻觉评测)
+[16] Embodied-RAG (具身RAG)
+[17] ELLMER (具身智能)
+[18] BCI-LLM融合 (脑机接口)
+[19] Memory Recall (脑解码)
+[20] GENESIS (类脑记忆)
+[21-22] Windsock (自适应mRAG)
+[23] CLIP (对比学习)
+[24] ALIGN (多模态对齐)
+[25] FG-CLIP (细粒度对齐)
+[26] Long-CLIP (长文本CLIP)
+[27] EI-CLIP (细粒度检索)
+[28] MagicLens (图像检索)
+[29] GLIDE (扩散模型)
+[30] Stable Diffusion (扩散模型)
+[31] PaLI (多模态模型)
+[32] ControlNet (条件控制扩散)
+[33] StableRep (合成数据训练)
+[34] MRAG-Bench (数据集)
+
+注：编号按正文首次引用顺序排列，共34条参考文献
+================================================================================

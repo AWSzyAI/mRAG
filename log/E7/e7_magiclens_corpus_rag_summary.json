@@ -1,0 +1,27 @@
+{
+  "dataset_name": "uclanlp/MRAG-Bench",
+  "processed": 1353,
+  "correct": 649,
+  "accuracy": 47.97,
+  "top_k": 5,
+  "retriever_type": "magiclens",
+  "clip_model_name": null,
+  "magiclens_model_size": "base",
+  "corpus_dir": "/public/home/hzh/mRAG/data/image_corpus",
+  "magiclens_rerank_enabled": false,
+  "by_scenario_accuracy": {
+    "Scope": 45.1,
+    "Obstruction": 48.15,
+    "Temporal": 46.98,
+    "Deformation": 50.0,
+    "Biological": 50.98,
+    "Angle": 51.55,
+    "Partial": 47.56,
+    "Incomplete": 32.35,
+    "Others": 51.67
+  },
+  "reference_overlap": 0,
+  "reference_agreement": null,
+  "reference_accuracy": null,
+  "run_accuracy_on_overlap": null
+}

@@ -1,4 +1,6 @@
-.PHONY: sync sync-code pull pull-role cmd alias config role-local role-remote role-show bpe clean
+.DEFAULT_GOAL := help
+
+.PHONY: help sync sync-code pull pull-role cmd alias config role-local role-remote role-show bpe clean
 
 # =====================================================================
 # ┌─────────────────┐          rsync           ┌──────────────────┐
@@ -8,7 +10,9 @@
 # └─────────────────┘        结果拉取          	 └──────────────────┘
 # =====================================================================
 
-SYNC_HOST ?= Ocean-NAT
+
+# SYNC_HOST ?= nnu
+SYNC_HOST ?= AB
 # SYNC_HOST ?= featurize
 # SYNC_HOST ?= AC
 
@@ -30,7 +34,7 @@ BPE_NAME ?= bpe_simple_vocab_16e6.txt.gz
 
 CONDA_BIN ?= conda
 CMD ?=
-KNOWN_TARGETS := sync sync-code pull pull-role cmd alias config role-local role-remote role-show bpe clean
+KNOWN_TARGETS := help sync sync-code pull pull-role cmd alias config role-local role-remote role-show bpe clean
 CMD_GOALS := $(filter-out $(KNOWN_TARGETS),$(MAKECMDGOALS))
 
 ifneq ($(filter cmd,$(MAKECMDGOALS)),)
@@ -64,6 +68,21 @@ define ensure_remote_sync_config
 	fi
 endef
 
+help:
+	@echo "Available targets:"; \
+	echo "  make help                Show this menu"; \
+	echo "  make sync                Preview sync local -> remote"; \
+	echo "  make sync y              Apply sync local -> remote"; \
+	echo "  make pull                Preview pull using $(PULL_DEFAULT_LIST)"; \
+	echo "  make pull <name>         Preview pull using <name> or <name>.txt"; \
+	echo "  make pull y              Apply pull using $(PULL_DEFAULT_LIST)"; \
+	echo "  make cmd CMD='<remote command>'"; \
+	echo "  make alias               Show alias config"; \
+	echo "  make config              Show resolved sync config"; \
+	echo "  make role-show           Show local/remote role"; \
+	echo "  make bpe                 Upload BPE file"; \
+	echo "  make clean               Clean generated files"
+
 
 
 sync:
@@ -96,7 +115,7 @@ sync-code:
 	awk -f scripts/build_rsync_filter.awk '$(EXCLUDE_FILE)' > "$$filter_file"; \
 	rsync_args='-az --partial --delete --itemize-changes --stats --human-readable -e ssh'; \
 	if [ "$(APPLY)" = "1" ]; then \
-		if ! rsync $$rsync_args --filter="merge $$filter_file" --info=stats2 \
+		if ! rsync $$rsync_args --filter="merge $$filter_file" \
 			'$(LOCAL_DIR)/' \
 			'$(SSH_HOST):$(REMOTE_DIR)/' > "$$tmp_log" 2>&1; then \
 			echo "[ERROR] rsync failed. Last lines:"; \
@@ -113,7 +132,7 @@ sync-code:
 		fi; \
 	fi; \
 	echo "---- changes (git style) ----"; \
-	awk '\
+	LC_ALL=C awk '\
 		function is_itemized(tok) { \
 			return (tok ~ /^[<>ch\.][fdLDS][^ ]{10}$$/); \
 		} \
@@ -177,7 +196,7 @@ sync-code:
 		fi; \
 	done < "$$tmp_changes"; \
 	change_count="$$(wc -l < "$$tmp_changes" | tr -d '[:space:]')"; \
-	awk '\
+	LC_ALL=C awk '\
 		function is_upload_file(tok) { \
 			return (tok ~ /^[<>ch]f[^ ]{10}$$/); \
 		} \
@@ -208,8 +227,8 @@ sync-code:
 		else if (b >= 1024) printf "%.2fK", b/1024; \
 		else printf "%dB", b; \
 	}')"; \
-	rsync_file_count="$$(awk -F': ' '/^Number of regular files transferred:/ {print $$2; exit}' "$$tmp_log")"; \
-	rsync_tx_size="$$(awk -F': ' '/^Total transferred file size:/ {print $$2; exit}' "$$tmp_log")"; \
+	rsync_file_count="$$(LC_ALL=C awk -F': ' '/^Number of regular files transferred:/ {print $$2; exit}' "$$tmp_log")"; \
+	rsync_tx_size="$$(LC_ALL=C awk -F': ' '/^Total transferred file size:/ {print $$2; exit}' "$$tmp_log")"; \
 	delete_warn_count="$$(grep -c '^cannot delete non-empty directory:' "$$tmp_log" || true)"; \
 	[ -z "$$rsync_file_count" ] && rsync_file_count=0; \
 	[ -z "$$rsync_tx_size" ] && rsync_tx_size=0B; \
@@ -256,10 +275,16 @@ pull:
 		exit 2; \
 	fi; \
 	tmp_list="$$(mktemp)"; \
-	tmp_log="$$(mktemp)"; \
+	tmp_list_main="$$(mktemp)"; \
+	tmp_list_log="$$(mktemp)"; \
+	tmp_log_main="$$(mktemp)"; \
+	tmp_log_log="$$(mktemp)"; \
+	tmp_log_all="$$(mktemp)"; \
 	tmp_changes="$$(mktemp)"; \
 	tmp_pull="$$(mktemp)"; \
-	trap 'rm -f "$$tmp_list" "$$tmp_log" "$$tmp_changes" "$$tmp_pull"' EXIT; \
+	tmp_pull_log="$$(mktemp)"; \
+	tmp_log_conflict="$$(mktemp)"; \
+	trap 'rm -f "$$tmp_list" "$$tmp_list_main" "$$tmp_list_log" "$$tmp_log_main" "$$tmp_log_log" "$$tmp_log_all" "$$tmp_changes" "$$tmp_pull" "$$tmp_pull_log" "$$tmp_log_conflict"' EXIT; \
 	awk '\
 		{ line=$$0; sub(/\r$$/, "", line); } \
 		/^[[:space:]]*$$/ { next } \
@@ -270,25 +295,102 @@ pull:
 		echo "Pull list is empty after filtering comments/blanks: $$list_file"; \
 		exit 2; \
 	fi; \
+	: > "$$tmp_list_main"; \
+	: > "$$tmp_list_log"; \
+	while IFS= read -r rel; do \
+		[ -z "$$rel" ] && continue; \
+		rel="$${rel#./}"; \
+		case "$$rel" in \
+			log/*) printf '%s\n' "$$rel" >> "$$tmp_list_log" ;; \
+			*) printf '%s\n' "$$rel" >> "$$tmp_list_main" ;; \
+		esac; \
+	done < "$$tmp_list"; \
 	echo "Pull list: $$list_file"; \
 	if [ "$$apply_mode" -eq 1 ]; then \
 		echo "Mode: APPLY (download changes)"; \
 	else \
 		echo "Mode: PREVIEW (dry-run only)"; \
 	fi; \
-	rsync_args='-azPr --itemize-changes --stats -e ssh --files-from'; \
-	if [ "$$apply_mode" -eq 0 ]; then \
-		if ! rsync $$rsync_args "$$tmp_list" --dry-run "$(SSH_HOST):$(REMOTE_DIR)/" "$(LOCAL_DIR)/" > "$$tmp_log" 2>&1; then \
+	rsync_args='-azPr --itemize-changes --stats --ignore-missing-args -e ssh --files-from'; \
+	if [ -s "$$tmp_list_main" ]; then \
+		if [ "$$apply_mode" -eq 0 ]; then \
+			if ! rsync $$rsync_args "$$tmp_list_main" --dry-run "$(SSH_HOST):$(REMOTE_DIR)/" "$(LOCAL_DIR)/" > "$$tmp_log_main" 2>&1; then \
+				echo "[ERROR] rsync failed. Last lines:"; \
+				tail -n 40 "$$tmp_log_main"; \
+				exit 1; \
+			fi; \
+		else \
+			if ! rsync $$rsync_args "$$tmp_list_main" "$(SSH_HOST):$(REMOTE_DIR)/" "$(LOCAL_DIR)/" > "$$tmp_log_main" 2>&1; then \
+				echo "[ERROR] rsync failed. Last lines:"; \
+				tail -n 40 "$$tmp_log_main"; \
+				exit 1; \
+			fi; \
+		fi; \
+	else \
+		: > "$$tmp_log_main"; \
+	fi; \
+	if [ -s "$$tmp_list_log" ]; then \
+		if ! rsync $$rsync_args "$$tmp_list_log" --dry-run "$(SSH_HOST):$(REMOTE_DIR)/" "$(LOCAL_DIR)/" > "$$tmp_log_log" 2>&1; then \
 			echo "[ERROR] rsync failed. Last lines:"; \
-			tail -n 40 "$$tmp_log"; \
+			tail -n 40 "$$tmp_log_log"; \
 			exit 1; \
 		fi; \
 	else \
-		if ! rsync $$rsync_args "$$tmp_list" "$(SSH_HOST):$(REMOTE_DIR)/" "$(LOCAL_DIR)/" > "$$tmp_log" 2>&1; then \
-			echo "[ERROR] rsync failed. Last lines:"; \
-			tail -n 40 "$$tmp_log"; \
-			exit 1; \
+		: > "$$tmp_log_log"; \
+	fi; \
+	cat "$$tmp_log_main" "$$tmp_log_log" > "$$tmp_log_all"; \
+	awk '\
+		function is_pull_file(tok) { \
+			return (tok ~ /^[<>ch]f[^ ]{10}$$/); \
+		} \
+		{ \
+			item = $$1; \
+			if (!is_pull_file(item)) next; \
+			path = $$0; sub(/^[^ ]+[[:space:]]+/, "", path); \
+			print path; \
+		} \
+	' "$$tmp_log_log" | sort -u > "$$tmp_pull_log"; \
+	log_plan_count="$$(wc -l < "$$tmp_pull_log" | tr -d '[:space:]')"; \
+	log_conflict_plan=0; \
+	: > "$$tmp_log_conflict"; \
+	while IFS= read -r rel; do \
+		[ -z "$$rel" ] && continue; \
+		abs='$(LOCAL_DIR)'/"$$rel"; \
+		if [ -e "$$abs" ]; then \
+			log_conflict_plan=$$((log_conflict_plan + 1)); \
+			printf '%s\n' "$$rel" >> "$$tmp_log_conflict"; \
 		fi; \
+	done < "$$tmp_pull_log"; \
+	log_new_plan=$$((log_plan_count - log_conflict_plan)); \
+	log_new_added=0; \
+	log_conflict_added=0; \
+	if [ "$$apply_mode" -eq 1 ] && [ -s "$$tmp_pull_log" ]; then \
+		stamp="$$(date +%Y%m%d_%H%M%S)"; \
+		while IFS= read -r rel; do \
+			[ -z "$$rel" ] && continue; \
+			src="$(SSH_HOST):$(REMOTE_DIR)/$$rel"; \
+			dst='$(LOCAL_DIR)'/"$$rel"; \
+			mkdir -p "$$(dirname "$$dst")"; \
+			if grep -Fxq "$$rel" "$$tmp_log_conflict"; then \
+				conflict_dst="$$dst.from_$(SYNC_HOST)_$$stamp"; \
+				n=1; \
+				while [ -e "$$conflict_dst" ]; do \
+					conflict_dst="$$dst.from_$(SYNC_HOST)_$$stamp_$$n"; \
+					n=$$((n + 1)); \
+				done; \
+				if ! rsync -azP -e ssh "$$src" "$$conflict_dst" > /dev/null 2>&1; then \
+					echo "[ERROR] rsync failed for log conflict copy: $$rel"; \
+					exit 1; \
+				fi; \
+				log_conflict_added=$$((log_conflict_added + 1)); \
+			else \
+				if ! rsync -azP -e ssh "$$src" "$$dst" > /dev/null 2>&1; then \
+					echo "[ERROR] rsync failed for log file: $$rel"; \
+					exit 1; \
+				fi; \
+				log_new_added=$$((log_new_added + 1)); \
+			fi; \
+		done < "$$tmp_pull_log"; \
 	fi; \
 	echo "---- changes (git style) ----"; \
 	awk '\
@@ -309,7 +411,7 @@ pull:
 			if (item ~ /\+\+\+\+\+\+\+\+\+/) op = "+"; \
 			printf("%s\t%s\n", op, path); \
 		} \
-	' "$$tmp_log" > "$$tmp_changes"; \
+	' "$$tmp_log_all" > "$$tmp_changes"; \
 	color_pref="$${MS_COLOR:-always}"; \
 	color_enabled=0; \
 	case "$$color_pref" in \
@@ -343,15 +445,23 @@ pull:
 		else \
 			size="N/A"; \
 		fi; \
+		note=""; \
+		case "$$rel" in \
+			log/*) \
+				if grep -Fxq "$$rel" "$$tmp_log_conflict" && [ "$$op" != "-" ]; then \
+					op="+"; \
+					note=" [log-protect: keep local, add conflict copy]"; \
+				fi ;; \
+		esac; \
 		if [ "$$color_enabled" -eq 1 ]; then \
 			c="$$c_yellow"; \
 			case "$$op" in \
 				+) c="$$c_green" ;; \
 				-) c="$$c_red" ;; \
 			esac; \
-			printf "%b%s%b %b%s%b (%s)\n" "$$c" "$$op" "$$c_reset" "$$c" "$$rel" "$$c_reset" "$$size"; \
+			printf "%b%s%b %b%s%b (%s)%s\n" "$$c" "$$op" "$$c_reset" "$$c" "$$rel" "$$c_reset" "$$size" "$$note"; \
 		else \
-			echo "$$op $$rel ($$size)"; \
+			echo "$$op $$rel ($$size)$$note"; \
 		fi; \
 	done < "$$tmp_changes"; \
 	change_count="$$(wc -l < "$$tmp_changes" | tr -d '[:space:]')"; \
@@ -365,7 +475,7 @@ pull:
 			path = $$0; sub(/^[^ ]+[[:space:]]+/, "", path); \
 			print path; \
 		} \
-	' "$$tmp_log" | sort -u > "$$tmp_pull"; \
+	' "$$tmp_log_all" | sort -u > "$$tmp_pull"; \
 	files_changed=0; \
 	total_bytes=0; \
 	total_lines=0; \
@@ -386,8 +496,8 @@ pull:
 		else if (b >= 1024) printf "%.2fK", b/1024; \
 		else printf "%dB", b; \
 	}')"; \
-	rsync_file_count="$$(awk -F': ' '/^Number of regular files transferred:/ {print $$2; exit}' "$$tmp_log")"; \
-	rsync_tx_size="$$(awk -F': ' '/^Total transferred file size:/ {print $$2; exit}' "$$tmp_log")"; \
+	rsync_file_count="$$(awk -F': ' '/^Number of regular files transferred:/ {print $$2; exit}' "$$tmp_log_all")"; \
+	rsync_tx_size="$$(awk -F': ' '/^Total transferred file size:/ {print $$2; exit}' "$$tmp_log_all")"; \
 	[ -z "$$rsync_file_count" ] && rsync_file_count=0; \
 	[ -z "$$rsync_tx_size" ] && rsync_tx_size=0B; \
 	echo "---- summary ----"; \
@@ -396,7 +506,18 @@ pull:
 	echo "Code volume (pulled files): $$human_size ($$total_bytes bytes)"; \
 	echo "Code lines (pulled files): $$total_lines"; \
 	echo "Rsync regular files transferred: $$rsync_file_count"; \
-	echo "Rsync transferred file size: $$rsync_tx_size"
+	echo "Rsync transferred file size: $$rsync_tx_size"; \
+	if [ -s "$$tmp_list_log" ]; then \
+		echo "Log files planned: $$log_plan_count"; \
+		if [ "$$apply_mode" -eq 1 ]; then \
+			echo "Log new files added: $$log_new_added"; \
+			echo "Log conflict copies added: $$log_conflict_added"; \
+		else \
+			echo "Log new files to add: $$log_new_plan"; \
+			echo "Log conflict copies to add: $$log_conflict_plan"; \
+		fi; \
+		echo "Log protect mode: existing local files under log/ are never overwritten/deleted."; \
+	fi
 
 pull-role:
 	$(ensure_remote_sync_config)
