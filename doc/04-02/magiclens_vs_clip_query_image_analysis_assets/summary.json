@@ -1,0 +1,22 @@
+{
+  "samples": 1353,
+  "top1_same": 204,
+  "top5_same": 0,
+  "avg_top5_overlap": 0.5351071692535108,
+  "clip_correct": 682,
+  "magic_correct": 649,
+  "clip_accuracy": 50.40650406504065,
+  "magic_accuracy": 47.96747967479675,
+  "clip_win": 152,
+  "magic_win": 119,
+  "both_correct": 530,
+  "both_wrong": 552,
+  "overlap_hist": {
+    "0": 909,
+    "1": 261,
+    "2": 107,
+    "3": 56,
+    "4": 19,
+    "5": 1
+  }
+}

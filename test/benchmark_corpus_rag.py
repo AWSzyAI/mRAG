@@ -24,15 +24,27 @@ from transformers import AutoProcessor, CLIPModel
 
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT_DIR))
 sys.path.append(str(ROOT_DIR / "github/LLaVA-NeXT"))
 sys.path.append(str(ROOT_DIR / "github/MRAG-Bench/eval"))
 sys.path.append(str(ROOT_DIR / "github/magiclens"))
+
+from src.mrag.transformers_llava_compat import ensure_modeling_utils_chunking_compat  # noqa: E402
+
+ensure_modeling_utils_chunking_compat()
 
 from llava.constants import DEFAULT_IMAGE_TOKEN, IMAGE_TOKEN_INDEX  # noqa: E402
 from llava.conversation import conv_templates  # noqa: E402
 from llava.mm_utils import process_images, tokenizer_image_token  # noqa: E402
 from llava.model.builder import load_pretrained_model  # noqa: E402
 from inference import load_model as load_magiclens_model  # noqa: E402
+from src.mrag import clip_retriever as core_clip
+from src.mrag import indexing as core_indexing
+from src.mrag import llava as core_llava
+from src.mrag import magiclens as core_magiclens
+from src.mrag import mrag_bench as core_bench
+from src.mrag import runtime as core_runtime
+from src.mrag import text as core_text
 
 
 SUPPORTED_IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tif", ".tiff"}
@@ -440,30 +452,6 @@ def retrieve_corpus_images_magiclens(
     return ranked
 
 
-def iter_bench_queries(dataset_name: str):
-    ds = load_dataset(dataset_name, split="test")
-    for item in ds:
-        qs = item["question"]
-        prompt_question_part = (
-            f"{qs}\n Choices:\n"
-            f"A: {item['A']}\n"
-            f"B: {item['B']}\n"
-            f"C: {item['C']}\n"
-            f"D: {item['D']}"
-        )
-        yield {
-            "id": item["id"],
-            "question": prompt_question_part,
-            "prompt_question_part": prompt_question_part,
-            "prompt": prompt_question_part,
-            "answer": item["answer"],
-            "gt_choice": item["answer_choice"],
-            "scenario": item["scenario"],
-            "aspect": item["aspect"],
-            "query_image": item["image"].convert("RGB"),
-        }
-
-
 def maybe_load_magiclens(args):
     needs_magiclens = (not args.disable_magiclens_rerank) or args.retriever_type == "magiclens"
     if not needs_magiclens:
@@ -484,6 +472,43 @@ def maybe_load_magiclens(args):
     encode_fn = build_magiclens_encoder(ml_model, ml_params, disable_jit=disable_jit)
     log("MagicLens model ready")
     return tokenizer_fn, encode_fn, disable_jit
+
+
+# Rebind reusable pipeline logic from src/mrag/.
+log = core_runtime.log
+log_torch_cuda_env = core_runtime.log_torch_cuda_env
+parse_question_and_options = core_text.parse_question_and_options
+extract_choice = core_text.extract_choice
+resolve_bpe_path = core_text.resolve_bpe_path
+preprocess_pil_image = core_magiclens.preprocess_pil_image
+build_magiclens_encoder = core_magiclens.build_magiclens_encoder
+rerank_rag_images = core_magiclens.rerank_rag_images
+encode_magiclens_images = core_magiclens.encode_magiclens_images
+retrieve_corpus_images_magiclens = core_magiclens.retrieve_corpus_images_magiclens
+load_clip_encoder = core_clip.load_clip_encoder
+l2_normalize = core_clip.l2_normalize
+encode_clip_images = core_clip.encode_clip_images
+list_corpus_images = core_clip.list_corpus_images
+encode_clip_query_image = core_clip.encode_clip_query_image
+retrieve_corpus_images = core_clip.retrieve_corpus_images
+corpus_signature = core_indexing.corpus_signature
+load_or_build_clip_corpus_index = core_indexing.load_or_build_clip_corpus_index
+load_or_build_magiclens_corpus_index = core_indexing.load_or_build_magiclens_corpus_index
+iter_bench_queries = core_bench.iter_bench_queries
+load_llava = lambda args: core_llava.load_llava(args, load_pretrained_model, log)
+llava_answer = lambda tokenizer, model, image_processor, item, image_files, args: core_llava.llava_answer(
+    tokenizer,
+    model,
+    image_processor,
+    item,
+    image_files,
+    args,
+    DEFAULT_IMAGE_TOKEN,
+    IMAGE_TOKEN_INDEX,
+    conv_templates,
+    tokenizer_image_token,
+    process_images,
+)
 
 
 def main():
@@ -516,6 +541,8 @@ def main():
     parser.add_argument("--llava-num-beams", type=int, default=1)
     parser.add_argument("--llava-greedy-jsonl", type=str, default="")
     args = parser.parse_args()
+
+    core_bench.ensure_mrag_hf_cache_env()
 
     answers_path = Path(args.answers_file)
     answers_path.parent.mkdir(parents=True, exist_ok=True)

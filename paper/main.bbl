@@ -30,15 +30,70 @@ M.M. Abootorabi et~al.
 \newblock Ask in any modality: A comprehensive survey on multimodal retrieval-augmented generation.
 \newblock {\em arXiv preprint arXiv:2502.08826}, 2025.
 
-\bibitem{hu2024mragbench}
-W.~Hu et~al.
-\newblock Mrag-bench: Vision-centric evaluation for retrieval-augmented multimodal models.
-\newblock {\em arXiv preprint arXiv:2410.08182}, 2024.
+\bibitem{li2023pope}
+Y.~Li, Y.~Du, L.~Zhou, S.~Huang, et~al.
+\newblock Evaluating object hallucination in large vision-language models.
+\newblock In {\em Proceedings of the 2023 Conference on Empirical Methods in Natural Language Processing}, pages 313--331, 2023.
+
+\bibitem{wang2023agent}
+Lei Wang, Chen Ma, Xinuo Feng, Xingyu Su, Ruochen Zhang, Roy Xu, Yufeng Niu, Shan An, et~al.
+\newblock A survey on large language model based autonomous agents.
+\newblock {\em arXiv preprint arXiv:2308.11432}, 2023.
+
+\bibitem{anthropic2024mcp}
+Anthropic.
+\newblock Introducing the model context protocol.
+\newblock 2024.
+
+\bibitem{anthropic2024claudecode}
+Anthropic.
+\newblock Claude code: Anthropic's ai-powered coding assistant.
+\newblock 2024.
+
+\bibitem{langchain2024skills}
+LangChain.
+\newblock Langchain state of ai agents report.
+\newblock 2024.
 
 \bibitem{radford2021clip}
 Alec Radford, Jong~Wook Kim, Chris Hallacy, Aditya Ramesh, Gabriel Goh, Sandhini Agarwal, Girish Sastry, Amanda Askell, Pamela Mishkin, Jack Clark, et~al.
 \newblock Learning transferable visual models from natural language supervision.
 \newblock In {\em International Conference on Machine Learning}, pages 8748--8763, 2021.
+
+\bibitem{zhang2024magiclens}
+K.~Zhang et~al.
+\newblock Magiclens: Self-supervised image retrieval with open-ended instructions.
+\newblock {\em arXiv preprint arXiv:2403.19651}, 2024.
+
+\bibitem{xie2024embodiedrag}
+T.~Xie, W.~Li, and et~al. Wang, Y.
+\newblock Embodied-rag: General non-parametric embodied memory for retrieval and generation.
+\newblock {\em arXiv preprint arXiv:2409.18313}, 2024.
+
+\bibitem{caria2025bci}
+A.~Carìa et~al.
+\newblock Towards predictive communication: The fusion of large language models and brain--computer interface.
+\newblock {\em Sensors}, 25(13):3987, 2025.
+
+\bibitem{zhao2025memoryrecall}
+Yuxiao Zhao, Guohua Dong, Lei Zhu, and Xiaomin Ying.
+\newblock Memory recall: Retrieval-augmented mind reconstruction for brain decoding.
+\newblock {\em Information Fusion}, 123:103280, 2025.
+
+\bibitem{genesis2025}
+Research Team.
+\newblock Genesis: A generative model of episodic-semantic interaction.
+\newblock {\em arXiv preprint arXiv:2510.15828}, 2025.
+
+\bibitem{hu2024mragbench}
+W.~Hu et~al.
+\newblock Mrag-bench: Vision-centric evaluation for retrieval-augmented multimodal models.
+\newblock {\em arXiv preprint arXiv:2410.08182}, 2024.
+
+\bibitem{gomez2021align}
+Aidan Gomez et~al.
+\newblock Align: Scaling up visual and vision-language representation learning with noisy text supervision.
+\newblock {\em Google Research Blog}, 2021.
 
 \bibitem{xie2025fgclip}
 C.~Xie et~al.
@@ -55,11 +110,6 @@ H.~Ma et~al.
 \newblock Ei-clip: Entity-aware interventional contrastive learning for e-commerce cross-modal retrieval.
 \newblock In {\em Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition}, pages 21991--22000, 2022.
 
-\bibitem{zhang2024magiclens}
-K.~Zhang et~al.
-\newblock Magiclens: Self-supervised image retrieval with open-ended instructions.
-\newblock {\em arXiv preprint arXiv:2403.19651}, 2024.
-
 \bibitem{nichol2022glide}
 Alex Nichol, Prafulla Dhariwal, Aditya Ramesh, Pranav Shyam, Pamela Mishkin, Bob McGrew, Ilya Sutskever, and Mark Chen.
 \newblock Glide: Towards photorealistic image generation and editing with text-guided diffusion models.
@@ -69,6 +119,11 @@ Alex Nichol, Prafulla Dhariwal, Aditya Ramesh, Pranav Shyam, Pamela Mishkin, Bob
 Robin Rombach, Andreas Blattmann, Dominik Lorenz, Patrick Esser, and Bj{\"o}rn Ommer.
 \newblock High-resolution image synthesis with latent diffusion models.
 \newblock In {\em Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition}, pages 10684--10695, 2022.
+
+\bibitem{chen2022pali}
+Xi~Chen et~al.
+\newblock Pali: A jointly-scaled multilingual language-image model.
+\newblock {\em arXiv preprint arXiv:2209.06794}, 2022.
 
 \bibitem{zhang2023controlnet}
 Lvmin Zhang and Maneesh Agrawala.

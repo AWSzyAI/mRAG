@@ -1,74 +1,111 @@
-% !TEX root = ./main.tex
-\begin{abstract}
-本文以 MRAG-Bench 为出发点，围绕多模态检索增强生成场景中的检索器瓶颈开展研究。与传统以文本知识检索为核心的 RAG 任务不同，MRAG-Bench 强调视觉证据在特定问题中的决定性作用，因此非常适合用于研究“检索器是否真正找到了有用图像证据”。在此基础上，本文首先复现并分析 MRAG-Bench 评测流程，进一步将问题拆分为局部重排与全库检索两条实验线；随后引入 MagicLens 作为候选重排与混合检索器的核心组件，分析其在关系驱动视觉检索中的潜在价值；最后基于统一评测系统给出当前阶段的初步实验结果，并讨论后续改进方向。
-\end{abstract}
+\chapter{绪论}
 
-\section{研究背景与意义}
+\section{研究背景及研究意义}
 
-近年来，以 Transformer 为代表的大规模语言模型与多模态大模型在自然语言理解、视觉问答和跨模态生成等任务中取得了显著进展\cite{vaswani2017attention,minaee2024llm}。然而，模型参数中固化的知识具有明显的时效性与覆盖边界，当问题依赖实时信息、长尾知识或细粒度视觉证据时，仅依靠参数记忆容易出现知识冻结与幻觉问题\cite{lewis2020rag,gao2023rag}。检索增强生成（RAG）通过在推理阶段引入外部知识，使模型从“闭卷作答”转向“开卷作答”，从而显著提升回答的真实性与可追溯性\cite{lewis2020rag,gao2023rag}。
+\subsection{多模态检索增强的特点及优势}
 
-随着多模态大模型的发展，研究重点进一步从文本 RAG 扩展到多模态检索增强生成（mRAG）\cite{mei2025multimodalrag,abootorabi2025ask}。在该范式下，系统不仅需要理解用户的文本与图像输入，还需要从外部图像、文档、表格等多模态知识源中检索并利用证据。然而，多模态检索器的性能往往成为决定系统上限的核心瓶颈：若检索阶段不能召回真正有用的视觉证据，后续生成模型再强，也容易被噪声图像误导。
+近年来，以 Transformer 及其变体为原理的大规模语言模型（LLM）在许多语言相关的任务中取得了非凡的成功\cite{vaswani2017attention,minaee2024llm}。通过在大量高质量的指令数据集上进行训练，LLMs 可以学习各种各样的语言模式、结构和事实知识，展现出强大的自然语言理解与自然语言生成能力。可以说，LLM 是新一轮科技革命的开端。2023 年 ChatGPT 的发布宣布了 AI 时代的到来，2024 年闭源开源大模型如雨后春笋纷纷破土而出，OpenAI o1 完成基于强化学习的推理探索后，DeepSeek 也进一步推动了思维链 CoT 的低成本普及。随着大模型不断渗透到编程、解题、医学顾问、语言学习等领域，如何提升其真实性、时效性与可用性，逐渐成为提高大模型解决具体问题的瓶颈。
 
-MRAG-Bench 正是在这一背景下提出的 vision-centric benchmark。该数据集强调一类典型场景：文本知识并非不可用，而是“不够有效”或“难以获得”，此时额外的图像证据反而更关键\cite{hu2024mragbench}。因此，从 MRAG-Bench 出发研究检索器，不仅有助于回答“图像检索是否有效”，更能进一步回答“检索器的收益到底来自粗召回、候选重排，还是下游模型的证据利用能力”。这也是本文工作的主要问题意识。
+但大模型在真实性与可用性上同时也存在信息时效性（outdated / frozen knowledge）与幻觉（hallucination）等问题\cite{lewis2020rag,gao2023rag}。虽然这些基座模型通常在多样且广泛的数据库上进行训练，但这些数据库很难覆盖高度专业领域或实时更新所需的深度知识，这就是所谓的知识冻结问题。当查询内容超出了模型训练语料的覆盖范围时，模型往往会给出基于模式而非严格证据的回答，甚至产生不准确或完全捏造的输出，这种现象就是幻觉。
 
-\subsection{国内外研究现状}
+RAG 正是在这一背景下应运而生。它通过在生成前增加 retrieve 步骤，从外部知识库中查询相关信息，并将其与原始 query 一同输入 LLM，从而使回答建立在检索到的事实证据之上\cite{lewis2020rag,gao2023rag}。可以说，RAG 将 LLM 的问答逻辑从闭卷考试转换成了开卷考试的范式，显著增强了回答的准确性与时效性。
 
-\subsubsection{分类1：mRAG 框架与评测基准}
+随着多模态大模型的发展，RAG 的外部知识也从文本逐步扩展到图像、表格、文档、视频等多种模态，多模态检索增强生成（Multimodal RAG, mRAG）因此成为研究热点\cite{mei2025multimodalrag,abootorabi2025ask}。mRAG 的核心优势在于：第一，它能够为下游模型提供更贴近任务需求的证据类型，而不仅是文本描述；第二，它能够通过跨模态证据缓解多模态模型的视觉幻觉问题；第三，它能够以更强的可追溯性支撑面向高风险应用的系统设计\cite{li2023pope,mei2025multimodalrag}。
 
-现有多模态 RAG 研究主要围绕框架设计、知识组织与评测基准展开\cite{mei2025multimodalrag,abootorabi2025ask}。一方面，mRAG 将传统 RAG 从单一文本检索扩展为图文联合检索与生成，使系统能够在视觉证据参与下完成更复杂的问答任务。另一方面，已有不少视觉问答与知识增强 benchmark，如 OK-VQA、A-OKVQA、WebQA、InfoSeek 等，但这些基准大多仍以文本外部知识为中心\cite{hu2024mragbench}。MRAG-Bench 的不同之处在于，它专门关注“视觉证据比文本证据更有用”的场景，因此为研究视觉检索器提供了更直接的试验场。
+\subsection{多模态生成模型的幻觉与知识冻结问题}
 
-\subsubsection{分类2：通用多模态检索模型}
+尽管多模态大模型表现出较强的语言理解与视觉描述能力，但其基础缺陷并未消失。其一是知识冻结问题，即模型训练语料具有时间截断，面对快速变化、领域私有或长尾知识时容易给出过时回答\cite{gao2023rag}。其二是幻觉问题，即模型会在证据不足时基于模式匹配生成貌似合理但并不真实的内容。在多模态场景中，这种问题不仅体现在文本事实上，也体现在视觉对象、属性和关系的错误描述上\cite{li2023pope}。
 
-在检索器层面，CLIP 及其后续工作构成了跨模态检索的主流基础\cite{radford2021clip}。围绕其细粒度理解不足与长文本建模能力有限的问题，研究者提出了 FG-CLIP、Long-CLIP、EI-CLIP 等改进模型\cite{xie2025fgclip,zhang2024longclip,ma2022eiclip}。此外，MagicLens 通过开放式指令学习图像间的深层关系，而非仅依赖浅层相似度匹配，这一点与 mRAG 中“找最有用证据而不是找最像图像”的需求高度契合\cite{zhang2024magiclens}。因此，MagicLens 是本文后续重点分析和改进的检索器对象。
+对于依赖图像证据才能稳定回答的问题，仅通过模型内部参数记忆很难获得可靠结果。若系统给出的外部图像本身存在偏差，下游视觉语言模型即使能力较强，也可能被噪声证据误导。因此，在 mRAG 中，“检索器能否找回真正有用的视觉证据”往往比“生成模型是否足够强”更直接地决定系统上限。
 
-\subsubsection{分类3：多模态数据生成、训练与增强方法}
+\subsection{检索增强生成与 mRAG 范式的发展}
 
-除了直接改进检索器本身，多模态生成模型与扩散模型也为检索增强研究提供了新的训练与增强路径\cite{nichol2022glide,rombach2022stable}。例如，扩散模型能够生成具有可控结构和语义属性的图像样本，从而为检索器提供额外训练数据或困难负样本\cite{zhang2023controlnet,tian2023stablerep}。这类方法为后续“检索器训练数据从哪里来”“如何增强长尾场景检索能力”提供了可行方向，也是本文未来拓展的重要切入点。
+近年来，围绕 RAG 与 mRAG 的系统工作不断涌现。已有综述指出，多模态检索增强生成已经从“给多模态模型加一个知识库”的初级范式，逐渐演化为一类需要同时解决检索规划、模态选择、跨模态对齐与证据利用的复杂系统问题\cite{mei2025multimodalrag,abootorabi2025ask}。与此同时，Agent、MCP、Skills 等工程机制也推动了“外部工具与外部知识协同”的应用式落地\cite{wang2023agent,anthropic2024mcp,anthropic2024claudecode,langchain2024skills}。
 
-\section{主要研究内容}
+在图像证据参与的任务中，传统“最近邻相似度检索”并不总能满足需求。很多问题要求的不是“找最像的图片”，而是“找最能帮助回答问题的图片”。这意味着检索器需要建模 query image、问题文本以及候选图像之间更复杂的语义关系。围绕这一需求，本文聚焦于混合检索器路线，即利用 CLIP 提供稳定的粗召回能力，再尝试引入 MagicLens 提升问题导向的关系检索能力\cite{radford2021clip,zhang2024magiclens}。
 
-本文当前阶段围绕“1 个 benchmark 复现工作 + 1 个检索改进工作 + 1 个系统验证工作”组织研究内容。
+\subsection{本文的目的及研究意义}
+
+本文的研究目标是：围绕 vision-centric mRAG 任务，提出并验证一种面向问题导向证据召回的混合检索方法，并在此基础上完成系统实现与统一评测分析。本文并不将工作简单定位为“检索工作流集成”，而是强调问题建模、方法设计、失败模式发现与系统扩展构成的完整技术链路。具体而言，本文试图回答以下问题：
+\begin{enumerate}[leftmargin=2em]
+\item 在多模态问答任务中，检索器的收益究竟来自局部重排还是完整图像库的粗召回？
+\item MagicLens 这类 instruction-aware 检索模型，是否能够稳定优于 CLIP 式相似度检索？
+\item 当检索结果没有带来整体增益时，问题究竟出在候选覆盖、排序机制，还是 query 表征本身？
+\item 在不改动检索器本体参数的前提下，多维查询与结果融合等查询侧扩展，能否为全库检索带来可解释、可复现的收益？
+\end{enumerate}
+
+上述研究不仅有助于澄清当前 mRAG 检索器优化的关键瓶颈，也为后续扩展到具身智能、脑机接口与类脑智能等需要长期外部记忆与证据检索的场景提供方法与分析基础\cite{xie2024embodiedrag,caria2025bci,zhao2025memoryrecall,genesis2025}。
+
+\section{国内外研究现状}
+
+\subsection{多模态 RAG 框架与评测基准}
+
+当前多模态 RAG 研究主要围绕系统框架、知识组织方式和评测基准展开\cite{mei2025multimodalrag,abootorabi2025ask}。一类工作关注如何让模型在文本、图像、表格和文档之间进行跨模态证据整合；另一类工作则关注如何用 benchmark 精确度量“检索阶段”与“生成阶段”的耦合误差。现有视觉问答与知识增强基准如 OK-VQA、A-OKVQA、WebQA、InfoSeek 等推动了外部知识研究，但许多任务仍以文本知识为中心，较少单独刻画“视觉证据比文本更关键”的使用条件。
+
+MRAG-Bench 的价值在于，它明确面向 vision-centric mRAG 场景构建，要求系统在很多题目上必须借助图像证据才能稳定回答\cite{hu2024mragbench}。因此，它并不是一个泛化意义上的视觉问答 benchmark，而更像一个检索器研究平台。本文正是基于这一点，将 MRAG-Bench 重新组织为“固定下游模型，仅比较检索器”的评测框架。
+
+\subsection{多模态问答（VQA）任务的发展脉络}
+
+从任务定义上看，本文所研究的问题仍然属于多模态问答（VQA）的延伸形态。传统 VQA 更关注“给定图像，模型能否理解图像内容并回答自然语言问题”；而本文所处的 vision-centric mRAG 场景，则进一步要求系统在回答前先从外部图像库中找回有帮助的视觉证据，再将这些证据交给下游多模态模型完成最终作答。也就是说，本文研究的不是“纯单图 VQA”，而是“带外部视觉证据检索的 VQA”。
+
+近年来，VQA 的研究主线大致经历了三个阶段。第一阶段聚焦单张图像上的目标识别、属性理解与关系推断，核心问题是模型能不能“看懂这张图”；第二阶段逐渐引入常识知识、开放域知识与多跳推理，使问题不再只依赖图像局部内容，而需要结合外部知识才能回答；第三阶段则进一步走向多模态大模型与检索增强系统，把“图像理解”和“外部证据调用”耦合起来。在这一演进过程中，VQA 的评价重点也从对象识别正确率，逐步扩展到证据利用能力、跨模态对齐能力与多步推理能力。
+
+从国内外研究现状来看，国外关于 VQA、知识增强 VQA 与多模态检索增强系统的研究起步更早，已逐步形成 benchmark、基座模型、评测工具和系统框架相互促进的格局。相比之下，国内相关研究近年来更多依托多模态大模型、知识增强框架和实际应用场景快速推进，工程落地速度很快，但专门面向“视觉证据检索质量”本身的分析型工作相对较少。也正因为如此，本文更希望把问题往前再推一步：不仅比较最终问答准确率，更追问“检索器究竟召回了什么图像”“这些图像为什么有用或没用”，从而把 VQA 系统里的检索瓶颈单独剥离出来研究。
+
+\subsection{通用多模态检索模型}
+
+在通用多模态检索领域，CLIP 及其后续工作构成了主流基础\cite{radford2021clip}。通过对比学习，CLIP 将图像与文本映射到共享向量空间，使图文检索成为可能。随后，ALIGN、FG-CLIP、Long-CLIP 和 EI-CLIP 等工作分别从数据规模、细粒度对齐、长文本支持与实体感知建模等角度进行改进\cite{gomez2021align,xie2025fgclip,zhang2024longclip,ma2022eiclip}。
+
+对于本文而言，CLIP 不只是相关工作的背景模型，还承担了非常具体的实验角色。本文在 corpus retrieval 实验中选用 \texttt{openai/clip-vit-base-patch32} 作为第一阶段粗召回器，原因主要有三点：第一，它是开放可复现、实现成熟且社区广泛使用的通用视觉表征模型，适合作为稳定 baseline；第二，它的图像编码接口简单，便于对完整图像库做离线向量化和缓存，能够较低成本地支撑全库检索实验；第三，CLIP 更强调视觉外观相似与语义近邻匹配，这恰好适合担任“先保住视觉邻域”的粗召回器，从而与后续 MagicLens 的关系感知能力形成互补。
+
+然而，CLIP 式检索器仍主要强调视觉外观相似与语义近邻匹配，未必适合“问题导向证据检索”。MagicLens 则试图进一步利用开放式文本指令学习图像间更复杂的关系，检索目标不再局限于“最像的图”，而是“满足给定关系的图像”\cite{zhang2024magiclens}。这一设计与 mRAG 中“寻找最有用证据”的需求高度相关，因此成为本文重点分析的对象。
+
+\subsection{多模态生成、训练与增强方法}
+
+除检索器本身外，多模态生成模型和扩散模型也为检索增强研究提供了新的训练与增强路径\cite{nichol2022glide,rombach2022stable,chen2022pali}。一方面，扩散模型能够合成具备可控属性与结构变化的图像样本，适合构造困难负样本或长尾场景数据；另一方面，ControlNet 与 StableRep 等工作说明，生成模型不仅可以服务于下游内容生成，也可以反向支撑检索器训练与数据增强\cite{zhang2023controlnet,tian2023stablerep}。
+
+因此，从整体趋势看，多模态检索增强已经不再是“单独优化相似度函数”的问题，而是正在逐步演化为“检索器、生成器、数据构建与系统评测共同迭代”的综合研究方向。
+
+\section{研究内容}
+
+本文当前阶段围绕“1 个 benchmark 复现工作 + 1 个混合检索方法工作 + 1 个系统验证与轻量化扩展工作”组织研究内容。
 
 \subsection{对 MRAG-Bench 工作的研究与复现}
 
-第一项工作是对 MRAG-Bench 的研究与复现。本文并不将其简单作为一个现成数据集使用，而是将其重新理解为一个“检索器研究平台”。具体来说，MRAG-Bench 的每个样本由 query image、问题文本和若干候选图像组成，问题覆盖 \textit{Angle}、\textit{Partial}、\textit{Scope}、\textit{Occlusion}、\textit{Temporal}、\textit{Deformation}、\textit{Incomplete}、\textit{Biological} 与 \textit{Others} 共 9 类场景\cite{hu2024mragbench}。这些场景天然对应了“视觉证据不足、视角变化、形态变化、局部缺失”等真实检索难点。
-
-在复现过程中，本文重点关注两个问题。其一，数据集给定候选与人工标注 GT 候选之间究竟存在多大差异；其二，若仅在已有候选上做 rerank，与从完整图像库重新做检索，二者评估的到底是不是同一件事。这个问题拆分为后续方法设计提供了基础。
+首先，本文对 MRAG-Bench 的数据组织、候选构成和评价逻辑进行了复现与再分析，重点回答两个问题：其一，数据集给定候选与人工标注 GT 候选之间究竟存在多大差异；其二，仅在给定候选上进行 rerank 与从完整图像库重新检索是否在衡量同一种能力。围绕这两个问题，本文补充了候选覆盖率统计、场景分布统计和 GT/候选重叠分析，为后续实验设计提供了依据。
 
 \subsection{针对现有检索器缺点的改进思路}
 
-第二项工作聚焦于现有检索器的缺点与改进。已有结果表明，单纯依赖 CLIP 式相似度匹配，在复杂视觉问答场景下往往难以稳定找回“最有用的图像证据”，尤其是在 query image 与目标证据之间存在显著视角变化、局部遮挡或语义关系变化时。为此，本文尝试引入 MagicLens 作为混合检索器的一部分，将其用于候选重排与关系驱动的图像检索。
-
-本文的核心假设是：mRAG 中真正需要的并非“最相似的图像”，而是“最能帮助回答问题的图像”。因此，相较于传统仅依赖 query image 与候选 image 的相似度建模，MagicLens 通过融合图像与开放式指令，更有可能学习到问题导向的检索关系。这一改进方向并不否定 CLIP 的粗召回能力，而是尝试构建“CLIP 粗召回 + MagicLens 重排”的混合检索框架。
+其次，本文聚焦于现有检索器在 vision-centric mRAG 中的主要不足，即 CLIP 能够提供较稳的视觉近邻召回，但未必能稳定找到“最有助于回答问题”的证据。为此，本文提出一种混合检索方法：以 CLIP 作为粗召回器，以 MagicLens 作为关系感知重排模块，并同时考察 MagicLens 作为直接召回器的适用边界。该方法的关键不在于简单串联两个模型，而在于明确区分“视觉近邻召回”和“问题导向证据排序”两类能力，并据此构建针对 mRAG 任务的功能分工。
 
 \subsection{对所提方法进行充分的实验验证}
 
-第三项工作是构建统一的评测与实验验证系统。本文在固定下游 VLM 与提示模板的前提下，对不同检索策略进行对比，包括 GT Oracle、数据集给定候选上的 rerank、完整 corpus 上的 CLIP baseline，以及后续计划完成的 CLIP + MagicLens 混合检索方案。通过将检索器作为唯一变量，尽量避免系统耦合对实验结论造成干扰。
+最后，本文构建了一套统一评测与分析流程，在固定下游 VLM 与提示模板的前提下，对 E0--E7 多条实验线进行系统比较。除 overall accuracy 外，本文还引入分场景准确率、Top-5 候选重合度、Top-1 一致率、逐样本胜负统计与高频重复命中分布等分析指标，用于定位检索器真正的收益来源与失败模式。与此同时，本文将多维查询构造、结果融合与工程化部署等方向作为后续扩展的自然落点，使工作不仅停留在单次实验对比，也具备继续迭代系统能力的空间。
 
-同时，本文不满足于只给出 overall accuracy，而是进一步从分场景性能、候选覆盖率、错误模式与典型案例几个维度分析结果。这样的系统化验证方式，一方面服务于当前论文写作，另一方面也构成后续毕业设计中的“实验系统”与“测试用例系统”的雏形。
+\section{论文结构}
 
-\section{模型架构与方法}
+本文正文在定稿阶段将按照“背景与研究意义、用到的技术与模型原理、我们的方法介绍、实验设置与实验结果分析、实验结果与分析、总结与展望”这一主线组织。当前稿件已经开始向这一结构收拢，具体如下：第1章为绪论，介绍研究背景、研究意义、国内外研究现状、本文研究内容及整体结构；第2章介绍本文用到的技术与模型原理，包括 RAG / mRAG、CLIP、MagicLens、CoT 与查询链式编排等内容；第3章介绍我们的方法，包括 overview、pipeline 架构、查询重写、多维检索与结果融合等；第4章为实验设置与实验结果分析，讨论数据集与候选覆盖、评价指标、实验线设计与对比基线等；第5章为实验结果与分析，讨论整体结果、分场景表现、效率对比以及 CLIP 与 MagicLens 的检索行为差异；第6章为总结与展望，并讨论数据集、模型和方法的局限性与后续研究方向。
 
-\subsection{模型架构}
+\chapter{相关技术与理论基础}
 
-本文采用的整体流程可以形式化为：给定查询元组
+\section{基线方法与改进管线}
+
+本文研究的任务可以形式化为：给定查询图像 $x_q$ 和问题文本 $q$，检索器需要从候选图像库中返回一个 Top-$K$ 图像集合 $I=\{i_1,\dots,i_K\}$，随后由视觉语言模型 $M$ 基于 $(x_q, q, I)$ 输出最终答案 $\hat{y}$。若记检索器为 $R$，则整个流程可以表示为
 \begin{equation}
-Q=(x_q, q),
-\end{equation}
-其中 $x_q$ 表示 query image，$q$ 表示问题文本。检索器 $R$ 根据查询返回 Top-$K$ 候选图像集合
-\begin{equation}
-I = R(Q)=\{i_1,i_2,\dots,i_K\},
-\end{equation}
-随后由视觉语言模型 $M$ 基于 $(Q, I)$ 输出最终答案
-\begin{equation}
-\hat{y}=M(Q,I).
+I = R(x_q, q), \qquad \hat{y}=M(x_q, q, I).
 \end{equation}
 
-在 baseline 方案中，$R$ 由 CLIP 相似度检索器实现；在改进方案中，本文考虑先使用 CLIP 完成粗召回，再使用 MagicLens 对候选进行重排。若记 query 表征为 $z_q$、候选图像表征为 $z_i$，则候选排序分数可表示为
-\begin{equation}
-s_i=\langle z_q,z_i\rangle.
-\end{equation}
-对于 MagicLens 路线，$z_q$ 的构造不再仅依赖 query image，而是进一步融合问题指令，从而形成更贴近下游任务目标的检索信号。
+对于该任务，本文认为存在四个核心挑战。第一，query image 与真正有用的证据图像之间，可能不是简单的外观相似关系，而是视角、时间、结构缺失或语义补充关系。第二，局部重排与全库检索混在一起时，实验结果很难解释，必须拆分不同能力。第三，检索质量不仅体现在最终正确率上，还体现在候选集合结构与错误模式上。第四，若方法最终要服务于真实系统部署，就不能只停留在大模型离线评测层面，还需要在工程上明确推理时延、并发与资源占用等约束，并据此组织可复现的流水线。
+
+\subsection{Baseline}
+
+\subsubsection{基于CLIP的通用检索器}
+
+CLIP 在本文中承担的是稳健粗召回器角色，它擅长在大规模图像库中快速找到视觉近邻。MagicLens 则更强调开放式指令驱动的关系检索能力，适合承担更贴近任务语义的候选重排模块。也正因为这两种模型的能力边界不同，本文才采用混合路线而不是单一模型路线。
+
+\subsubsection{基于MagicLens的通用指令检索器}
+
+本文采用的总体思路是：保留 CLIP 在大规模图像库中的稳健粗召回能力，再引入 MagicLens 作为关系感知的重排或直接检索模块，从而提出一种面向 vision-centric mRAG 的混合检索方法。整体流程如图~\ref{fig:arch_baseline_vs_magiclens} 所示。
 
 \begin{figure}[htbp]
 \centering
@@ -77,34 +114,91 @@ s_i=\langle z_q,z_i\rangle.
 \label{fig:arch_baseline_vs_magiclens}
 \end{figure}
 
-\subsection{损失函数与优化目标}
+\subsection{Ours Pipeline Improve}
 
-当前已完成实验主要基于现成模型进行评测，尚未进入端到端训练阶段。但从方法设计角度，本文将检索优化目标表述为“正确证据应获得更高排序分数”。若 $i^+$ 表示正样本证据图像，$\{i_j\}$ 表示候选集合，则可采用对比式排序损失：
+\subsubsection{Overview：基于混合检索器的查询链设计（创新点）}
+
+从系统视角看，RAG 负责把外部知识引入生成过程，mRAG 则把这种知识扩展到了图像、视频等多种模态。如何利用好多模态输入来生成好的回答，是基座多模态大模型的任务；而如何根据初始输入构建相关的查询，并根据查询精准地匹配到当前任务所需要的图片、视频等多模态数据，最后整合信息以有效的提示词调用基座多模态大语言模型，则是构建 mRAG 系统的目的所在。
+
+在本文后续的方法框架里，pipeline LLM 不只承担“调用一次模型回答问题”的角色，还承担查询分析、问题改写与推理链补充的作用。尤其是 CoT 机制，可以帮助系统把原始问题拆成更适合检索的中间语义表示，这一点对后续的问题到 query 的映射非常关键。
+
+CLIP 路线将 query image 编码为视觉向量，与完整 corpus 中图像向量进行相似度计算，并返回 Top-$K$ 候选\cite{radford2021clip}。该方法的优点是鲁棒、工程实现成熟、在大规模图像库中粗召回效率较高，因此适合作为真实系统中的第一阶段召回器。本文中的 E3 即对应“CLIP 直接从完整 corpus 召回 Top-5 候选”的 baseline。
+
+MagicLens 与 CLIP 的差异在于，其 query 侧并不只依赖 query image，而是进一步融合开放式文本指令，使模型倾向于捕捉图像间的关系结构，而非仅仅寻找视觉邻居\cite{zhang2024magiclens}。在本文中，MagicLens 被放置在两个位置上：
+\begin{enumerate}[leftmargin=2em]
+\item 作为重排器，对已有候选集进行 rerank，对应 E1、E2 和 E6；
+\item 作为 direct retriever，直接从完整 corpus 中召回 Top-5，对应 E7。
+\end{enumerate}
+
+通过这种设计，本文能够区分“MagicLens 在排序阶段是否有效”和“MagicLens 作为独立召回器是否稳定”这两个不同问题。更重要的是，该方法明确了 CLIP 与 MagicLens 在混合框架中的职责划分：前者负责稳定、可扩展的候选覆盖，后者负责更贴近问题语义的关系感知排序。
+
+\subsubsection{基于Gemma 4的多维度查询重写}
+
+本文的方法不将用户问题直接原样送入检索器，而是强调从 `Question -> query` 的中间转换。原因在于，原始问题往往更接近生成任务语言，而不一定是最适合检索的表达形式。对于 mRAG 来说，真正需要的是能够表达“当前任务到底要找什么证据”的 query。
+
+因此，本文在 pipeline LLM 中加入查询重写模块。该模块通过问题理解、关键词抽取、关系补全与 CoT 推理，把原始 question 改写成更适合图像检索的 query 表达，并作为后续多维指令生成与分路召回的输入基础。
+
+单一开放式英文指令虽然能把自然语言意图接入 MagicLens，但在全库检索条件下容易与查询图像的实例级约束脱节，排序结果也更容易被少数高响应模式牵引。为在不大改检索器本体的前提下扩展查询侧表达，本文实现了一条“多检索维度—分路召回—列表融合”的链路：先用多模态模型在查询图像与题干共同条件下生成 $N$ 条互补的短英文检索句，再令 MagicLens 在每条句子上各跑一次语料库排序，最后用融合算子把多路 Top-$K$ 结果压缩为固定长度的候选集合并送入下游视觉语言模型。
+
+维度规划器采用本地部署的 Gemma~4~E2B-it（\texttt{google/gemma-4-E2B-it}）。该模型属于指令式多模态小体量变体，可在单卡上以 Transformers 栈加载：处理器与权重优先从本地快照目录读取，若目录中缺少完整文件则回退至 Hub 拉取；类选择按官方接口依次尝试图文生成模型与多模态语言模型等候选实现，数值类型在 CUDA 可用时优先采用 bfloat16 或 float16。系统消息用英文规定输出形态——模型须给出恰好 $N$ 行、每行一条不超过约三十个词的具体图像检索指令，行首不得编号，也不得附加说明；用户消息由两部分组成，其一是 MRAG-Bench 样本的查询图像，其二是题干文本，图像以经解析的本地绝对路径作为多模态字段传入，以避免文件 URL 形式在处理器侧被拒绝。解码采用贪心或束宽为一的确定性设置，控制最大新增词元规模，降低维度文本漂移。生成结束后，对模型输出按行切分并去除项目符号与行首编号，截取前 $N$ 条非空行作为有效指令；若行数不足，则依次回退到题干字符串或实验配置给出的备用指令，从而保证后续 MagicLens 调用始终获得定长输入。
+
+\subsubsection{查询后处理：查询结果聚合方法}
+
+给定第 $j$ 条指令文本 $t_j$ 与查询图像 $x_q$，MagicLens 以 $(x_q,t_j)$ 编码查询侧表征，在外部语料库向量上计算相似度并得到各自的 Top-$K_{\mathrm{dim}}$ 列表。多路列表并不直接拼接，而是先送入融合模块：实现上提供倒数排名和（RRF）、分数求和与投票式策略等可选算子，将多份排序信号合并为长度 $K_{\mathrm{final}}$ 的候选序列，以抑制单路排序中的偶然尖峰并在不同语义维度之间做折中。融合得到的图像路径与查询图像一起，按与 corpus 线实验相同的提示模板与选项抽取流程输入 LLaVA-OneVision，使该流水线在“固定下游模型、更动检索与查询构造”的意义上可与既有 E0--E7 结果对照。
+
+与上述 Gemma~4 分支并列，维度文本亦可通过仅消费题干的接口大模型或本地纯文本生成模型获得；二者不读取查询图像，部署成本较低，但无法利用画面中的细粒度线索拆分检索需求。三类后端在同一脚本入口中以参数切换，便于在控制硬件条件的前提下比较“文本规划”和“图文协同规划”对 MagicLens 召回行为的影响。当前稿件的主结果表仍以单指令或单路检索配置为主，多维融合链路作为已实现的系统扩展写入方法章节，其定量评测将在后续实验中补齐。
+
+\subsubsection{生成器的选择：LLaVA vs Gemma 4}
+
+在生成器选择上，本文采用 LLaVA 作为当前实验主线中的答案生成器（用于 E0--E7 的可比实验），并将 Gemma~4 主要用于查询链中的维度规划与查询重写模块，以发挥其多模态指令理解优势。该策略保证了“检索器变化可控、生成器变量稳定”，同时也为后续开展 LLaVA 与 Gemma~4 作为生成器的系统对比预留了统一接口。
+
+\subsection{Pipeline LLM 与查询链编排}
+
+在本文的方法框架中，pipeline LLM 承担查询分析、问题改写与可选的 CoT 式中间推理，用于把自然语言问题显式映射为更利于检索的中间表示，并驱动“多维度指令—分路召回—结果融合”的执行顺序。受时间与算力限制，本文工作止步于\textbf{推理期（inference-time）}的系统集成与对比评测，不在此处展开面向检索器或规划器的参数学习与专用训练。
+
+从工程实现上看，pipeline 中可调用的模型既可以是接口式大模型，也可以是本地部署的多模态模型（如 Gemma~4 用于维度规划），其差异主要体现在部署成本、时延与可复现性，但\textbf{不改变}本文以“固定下游 VLM、以检索与查询构造为唯一变量”的评测原则。
+
+\subsection{优化目标}
+
+尽管当前阶段的实验主要基于现成模型评测，尚未进入端到端训练，但从方法设计角度仍可将混合检索器的优化目标写为“正例证据应获得更高分数”。若记 query 表征为 $z_q$，候选图像表征为 $z_i$，则相似度分数写为
+\begin{equation}
+s_i = \langle z_q, z_i \rangle.
+\end{equation}
+若 $i^+$ 表示正样本证据图像，$\{i_j\}$ 表示候选集合，可采用对比式排序损失：
 \begin{equation}
 \mathcal{L}_{\text{rank}}
 = -\log \frac{\exp(s(q,i^+))}
 {\sum_j \exp(s(q,i_j))}.
 \end{equation}
 
-若后续将检索器训练与下游问答联合起来，还可以进一步引入答案预测损失
+若未来将检索器优化与下游问答联合训练，还可以进一步加入答案预测损失
 \begin{equation}
-\mathcal{L}_{\text{ans}}=-\log p(\hat{y}=y^\ast \mid Q,I),
+\mathcal{L}_{\text{ans}}=-\log p(\hat{y}=y^\ast \mid x_q,q,I),
 \end{equation}
 并构造联合目标
 \begin{equation}
-\mathcal{L}=\mathcal{L}_{\text{rank}}+\lambda \mathcal{L}_{\text{ans}},
+\mathcal{L}=\mathcal{L}_{\text{rank}}+\lambda\mathcal{L}_{\text{ans}}.
 \end{equation}
-其中 $\lambda$ 用于控制检索与生成目标的权重。该形式为后续改进检索器训练提供了明确的优化方向。
+这一形式为后续若将检索器与下游问答纳入同一优化目标时的理论表达提供参考；本文实验阶段仍以现成模型评测为主，不对上述损失进行实际训练拟合。
 
-\section{实验设计与论文初步结果}
+\chapter{实验设计与结果分析}
 
-\subsection{数据集与候选分析}
+\section{数据集与候选覆盖分析}
 
-本文使用 MRAG-Bench 作为核心评测数据集。该数据集包含 1353 个测试样本和 16130 张图像，是目前少数明确围绕 vision-centric mRAG 构建的 benchmark\cite{hu2024mragbench}。从候选图像角度看，\texttt{gt\_images} 与 \texttt{retrieved\_images} 在原始定义上并不等价：前者代表人工选择的正例视觉证据，后者则是数据集提供的检索候选。进一步统计发现，在 44.12\% 的样本中，二者完全无重叠，平均 GT 覆盖率仅为 22.78\%。这说明若只在数据集给定候选上做局部重排，实验结论很可能无法反映真实的全库检索能力。
+本文使用 MRAG-Bench 作为核心评测数据集。该数据集包含 1353 个测试样本和 16130 张图像，覆盖 \textit{Angle}、\textit{Partial}、\textit{Scope}、\textit{Occlusion/Obstruction}、\textit{Temporal}、\textit{Deformation}、\textit{Incomplete}、\textit{Biological} 与 \textit{Others} 等九类典型视觉难点\cite{hu2024mragbench}。
+
+如果只看这一句介绍，其实很容易误解 MRAG-Bench 到底在评什么。更准确地说，MRAG-Bench 不是“普通单图 VQA 数据集”，而是“带外部视觉证据的多选 VQA benchmark”。每个样本至少包含以下几部分信息：输入图像 \texttt{image}、问题文本 \texttt{question}、四个候选答案 \texttt{A/B/C/D}、标准答案 \texttt{answer/answer\_choice}、人工标注的正例证据图像集合 \texttt{gt\_images}，以及数据集额外给出的候选检索图集合 \texttt{retrieved\_images}。这意味着它天然同时包含“问答任务”和“检索任务”两层结构。
+
+在 MRAG-Bench 原始评测脚本里，下游模型接收到的输入形式并不是单独的一张 query image，而是“第 1 张图为输入图像，后若干张图为辅助证据图像”的多图输入形式。若不开启 RAG，则模型只看到输入图像；若开启 RAG，则模型会看到输入图像与额外证据图像，并在统一提示词下输出四选一答案。这一点可以从 MRAG-Bench 的官方 dataloader 中直接看到：当 \texttt{use\_rag=False} 时，\texttt{image\_files=[image]}；当 \texttt{use\_rag=True} 时，\texttt{image\_files=[image]+gt\_images}，若进一步指定 \texttt{use\_retrieved\_examples=True}，则证据部分改为 \texttt{retrieved\_images}。
+
+因此，\texttt{gt\_images} 与 \texttt{retrieved\_images} 的语义并不相同。前者更接近“oracle 级别的人工标注正例证据”，代表如果系统真的找回这些图像，下游模型理论上更有机会答对；后者则是数据集作者提供的一组检索候选，作用更像“现成检索器找回来的外部图像”。二者并非一一对应，也不是同一批图像的重命名。也正因为如此，本文才需要专门统计二者的重叠关系，否则很容易把“在给定候选上做 rerank”误写成“真实图像库上的检索能力”。
+
+除 MRAG-Bench 外，本文还将 InfoSeek 作为当前优先考虑的第二数据集方向，但这部分在定稿阶段是否进入总表与主结果章节，仍取决于实际推进进度。之所以优先考虑 InfoSeek，是因为它与外部知识、图像证据和检索验证场景结合得较紧，适合作为本文方法泛化能力的补充观察对象。当前已知信息是：OVEN 数据集一共包含 5802496 张图片，其中 InfoSeek 使用了 1000000 张图片。对于本文而言，这类大规模图像库的意义主要不在于直接替代 MRAG-Bench，而在于为 query 重写、全库检索压力测试与更接近真实系统部署的实验提供数据基础。因此，在当前稿件中，InfoSeek 更适合作为“扩展验证与后续工作方向”被提及，而不是在实验结果已经充分完成之前过早写成主体结论。
+
+本文首先对 \texttt{gt\_images} 与 \texttt{retrieved\_images} 两类字段进行了再统计。结果发现：前者代表人工标注的正例视觉证据，后者则是数据集提供的候选集合，二者并不等价。在 44.12\% 的样本中，两者完全无重叠，平均 GT 覆盖率仅为 22.78\%。这说明若只在数据集给定候选上做局部重排，实验结论可能无法反映真实全库检索能力。
 
 \begin{table}[htbp]
 \centering
-\scriptsize
 \caption{MRAG-Bench 原始字段数量与实际进入模型的候选数对照。}
 \label{tab:mrag_candidate_count_compare}
 \begin{tabular}{lrrr}
@@ -125,31 +219,89 @@ Retrieved effective & 102 (7.54\%) & 1251 (92.46\%) & 4.70 \\
 \label{fig:retrieved_images_hist}
 \end{figure}
 
-\subsection{实验线设计}
+\begin{figure}[htbp]
+\centering
+\begin{subfigure}{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{dataset_scenario_distribution.png}
+    \caption{九类场景样本量分布。}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{overlap_recall_by_scenario.png}
+    \caption{各场景 GT 覆盖率与零重叠比例。}
+\end{subfigure}
+\caption{MRAG-Bench 的场景分布与候选覆盖特征。}
+\label{fig:dataset_analysis}
+\end{figure}
 
-基于上述观察，本文将实验拆为两条主线。第一条是 \textbf{Rerank line}：在固定候选集上分析 MagicLens 是否能够改善排序；第二条是 \textbf{Corpus line}：先从完整图像库中做粗召回，再分析召回与重排各自贡献。前者更接近“候选精排”，后者更接近真实 mRAG 的实际使用方式。
+\section{评价指标与实验设置}
 
-在当前阶段，本文已经完成或已经具备脚本支持的代表性实验包括：
-\begin{itemize}[leftmargin=1.5em]
+为了尽量将性能差异归因于检索器本身，本文固定下游视觉语言模型与提示模板，仅改变图像检索策略。评价指标包括：
+\begin{enumerate}[leftmargin=2em]
+\item \textbf{Overall Accuracy}：最终多选题正确率；
+\item \textbf{Scenario Accuracy}：九类细分场景的分项准确率；
+\item \textbf{Top-5 Overlap}：不同检索器召回集合的交集规模；
+\item \textbf{Top-1 Match Rate}：不同检索器 Top-1 是否一致；
+\item \textbf{逐样本胜负统计}：当两种检索器产生不同结果时，比较谁最终答对更多样本。
+\end{enumerate}
+
+此外，本文还统计高频重复命中的 Top-1 图像分布，以分析检索器是否存在明显的“原型图吸附”偏置。
+
+\section{实验线设计}
+
+基于前述候选覆盖分析，本文将实验拆分为两条主线：
+\begin{enumerate}[leftmargin=2em]
+\item \textbf{Rerank line}：在固定候选集上分析 MagicLens 是否能够改善排序；
+\item \textbf{Corpus line}：从完整图像库中进行粗召回，再分析召回与重排的各自贡献。
+\end{enumerate}
+
+在当前阶段，已完成或具备脚本支持的代表性实验包括：
+\begin{itemize}[leftmargin=1.8em]
 \item E0：LLaVA + GT-RAG baseline，用于给出较高上界；
 \item E1：在 GT 候选集上做 MagicLens 重排，衡量理想候选集上的重排收益；
 \item E2：在数据集给定候选上做 MagicLens 重排，衡量局部重排能力；
-\item E3：使用 CLIP 从完整 corpus 中召回 Top-5 候选，作为真实全库检索 baseline。
-\item E6：使用 CLIP 粗召回后，再由 MagicLens 对 Top-5 候选执行 rerank。
+\item E3：使用 CLIP 从完整 corpus 中召回 Top-5 候选，作为真实全库检索 baseline；
+\item E4：LLaVA + No-RAG，对照“不给外部证据”的情况；
+\item E5：GT-RAG w/o rerank，用于检验 oracle 条件下排序阶段的边界收益；
+\item E6：使用 CLIP 粗召回后，再由 MagicLens 对 Top-5 候选执行 rerank；
 \item E7：使用 MagicLens 直接从完整 corpus 中召回 Top-5 候选，作为 direct retrieval baseline。
 \end{itemize}
 
-\subsection{初步实验结果}
+其中，E3 是本文最重要的真实全库检索 baseline 之一。它并不是简单“调用了一下 CLIP”，而是把 CLIP 明确放在了第一阶段粗召回器的位置上。具体来说，本文使用 \texttt{openai/clip-vit-base-patch32} 作为通用图文表征模型，对完整图像语料库中的每一张图像先离线编码成向量；测试时，再把每个样本的输入图像 \texttt{image} 编码成 query embedding，与整个 corpus 的图像向量做相似度计算，返回 Top-5 作为检索到的候选证据图像。随后，系统将“输入图像 + 这 5 张候选图”一起送入 LLaVA 作答。
 
-控制实验方面，E4（LLaVA+No-RAG）的整体准确率为 \textbf{53.14\%}，高于 E3 与 E7，但仍低于引入 GT 候选的 E0/E1/E5。这说明“不给外部证据”并不一定比“给到噪声证据”更差，检索模块只有在真正召回了有用图像时才会产生正收益。E5（GT-RAG w/o rerank）的整体准确率为 \textbf{60.16\%}，与 E1 基本持平，说明在 oracle 候选条件下，MagicLens 重排带来的整体收益有限，排序阶段并不是当前系统的唯一主瓶颈。
+因此，CLIP 在 E3 中扮演的是“视觉粗召回器”而不是“最终回答模型”或“重排器”。它的输入是 query image 与完整 corpus；它的输出不是答案，而是 Top-5 候选图像列表或对应相似度排序。之所以选择 \texttt{openai/clip-vit-base-patch32}，并不是 MRAG-Bench 官方 baseline 强制规定必须使用这个模型，而是本文在自建的 corpus retrieval 脚本中将其作为通用、稳定、实现成本低的第一阶段检索器。更具体地说，它一方面足够经典，便于和后续工作对齐；另一方面推理与索引构建成本可控，适合当前阶段快速完成完整图像库上的粗召回实验；再一方面，它能够提供相对稳健的视觉邻域，为后续 MagicLens 重排和 query rewrite 留出清晰的比较基线。对应实现位于 \texttt{test/benchmark\_corpus\_rag.py}，其中通过 \texttt{AutoProcessor.from\_pretrained(model\_name)} 与 \texttt{CLIPModel.from\_pretrained(model\_name)} 加载该模型，并在参数默认值中将 \texttt{model\_name} 设为 \texttt{openai/clip-vit-base-patch32}。
 
-当前已完成的 corpus 线实验包括 E3、E6 与 E7。E3 表明：仅使用 CLIP 从完整 corpus 中召回 Top-5 候选时，整体准确率为 \textbf{50.41\%}（682/1353）。与 E2 相比，E3 的整体表现接近，但这并不意味着“CLIP 粗召回已经足够”；相反，它说明局部重排实验与全库检索实验确实在测量不同能力。分场景结果显示，E3 在 \textit{Deformation}（58.82\%）、\textit{Others}（57.50\%）与 \textit{Occlusion/Obstruction}（54.63\%）上相对稳定，而在 \textit{Temporal}（46.31\%）、\textit{Scope}（48.04\%）与 \textit{Incomplete}（22.55\%）场景上仍明显偏弱。
+这一点也解释了为何在 MRAG-Bench 官方 \texttt{llava\_one\_vision.py} 中检索 \texttt{clip} 并不能直接得到全库检索实现：官方脚本负责在既定输入图像与既定证据图像条件下调用 LLaVA 作答，并不承担从完整图像库中召回候选的职责。CLIP 是本文为 E3、E6 等 corpus 线实验单独接入的粗召回器，用于考察在脱离数据集 \texttt{retrieved\_images} 的前提下，从自建语料库中直接检索五张证据图像时的系统行为。
 
-E6 进一步评估了 ``CLIP 粗召回 + MagicLens 重排'' 的混合方案。实验结果显示，E6 的整体准确率为 \textbf{50.33\%}（681/1353），与 E3 的 50.41\% 基本持平。分场景来看，E6 在 \textit{Scope}（55.88\%）与 \textit{Incomplete}（27.45\%）上较 E3 有所提升，但在 \textit{Partial}（49.19\%）、\textit{Occlusion/Obstruction}（51.85\%）与 \textit{Biological}（49.02\%）上略有下降。这说明当前版本的 MagicLens 重排尚未稳定改善 CLIP 粗召回结果，后续仍需进一步优化 query instruction 与重排策略。
 
-E7 则进一步评估了 MagicLens 作为 direct retriever 的真实全库召回能力。实验结果显示，E7 的整体准确率为 \textbf{47.97\%}（649/1353），略低于 E3 的 50.41\%。分场景来看，E7 在 \textit{Incomplete}（32.35\%）上显著优于 E3，在 \textit{Biological}（50.98\%）与 \textit{Temporal}（46.98\%）上也有轻微提升，但在 \textit{Partial}（47.56\%）、\textit{Occlusion/Obstruction}（48.15\%）、\textit{Deformation}（50.00\%）与 \textit{Others}（51.67\%）上整体弱于 CLIP baseline。这说明 MagicLens 直接全库召回并非简单优于 CLIP，但它在某些更依赖结构缺失判断的场景中表现出潜力。
+\section{整体结果与控制实验}
 
-\begin{table*}[t]
+控制实验方面，E4（LLaVA+No-RAG）的整体准确率为 \focusval{53.14\%}，高于 E3 与 E7，但仍明显低于引入 GT 候选的 E0/E1/E5。这表明“是否引入外部图像”并不是唯一决定因素，关键在于图像证据是否真正有用。E5（GT-RAG w/o rerank）的整体准确率为 \best{60.16\%}，与 E1 基本持平，说明在 oracle 候选条件下，MagicLens 重排带来的整体收益有限，排序阶段并不是当前系统唯一瓶颈。
+
+\begin{figure}[htbp]
+\centering
+\begin{subfigure}{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{overall_accuracy_e0_e7.png}
+    \caption{E0--E7 的整体准确率对比。}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{control_rerank_compare.png}
+    \caption{控制实验与 rerank 对照结果。}
+\end{subfigure}
+\caption{不同实验线的整体表现对比。}
+\label{fig:overall_and_control_compare}
+\end{figure}
+
+\section{实验命名与结果总表}
+
+表~\ref{tab:exp2_real_rag} 汇总了当前阶段 E0--E7 的整体与分场景结果。为便于解释，本文在左侧明确区分了 \textit{Control}、\textit{Rerank} 与 \textit{Corpus} 三类实验轨道。
+
+\begin{table}[htbp]
 \centering
 \scriptsize
 \caption{实验命名与结果总表。左侧新增实验类型（Rerank / Corpus / Control），用于区分局部重排与全库检索。}
@@ -168,20 +320,40 @@ E7 则进一步评估了 MagicLens 作为 direct retriever 的真实全库召回
 & Temporal & Deformation & Incomplete & Biological
 & \\
 \midrule
-Control & E0: LLaVA+GT-RAG Baseline & 59.05 & 59.63 & 64.23 & 66.67 & 67.59 & 57.72 & 56.86 & 29.41 & 55.88 & 64.17 \\
-Rerank & E1: $GT\text{-}RAG\text{-}RANKING_{magiclens}$ & 60.16 & 61.49 & 65.45 & 66.67 & 69.44 & 58.39 & 57.84 & 30.39 & 55.88 & 65.00 \\
-Rerank & E2: Retrieved-RAG-RANKING$_{magiclens}$ & 51.74 & 51.24 & 50.41 & 59.80 & 59.26 & 48.99 & 55.88 & 33.33 & 50.00 & 59.17 \\
-Corpus & E3: CLIP-RAG Baseline (Top-5 from corpus) & 50.41 & 52.48 & 54.07 & 48.04 & 54.63 & 46.31 & 58.82 & 22.55 & 50.00 & 57.50 \\
-Control & E4: LLaVA+No-RAG & 53.14 & 56.21 & 56.10 & 55.88 & 57.41 & 47.65 & 55.88 & 33.33 & 50.98 & 55.83 \\
-Control & E5: $GT\text{-}RAG\text{-}RANKING_{magiclens}$ w/o rerank & 60.16 & 59.94 & 66.67 & 63.73 & 66.67 & 61.74 & 56.86 & 29.41 & 57.84 & 67.50 \\
+Control & E0: LLaVA+GT-RAG Baseline & 59.05 & 59.63 & 64.23 & \best{66.67} & 67.59 & 57.72 & 56.86 & 29.41 & 55.88 & 64.17 \\
+Rerank & E1: $GT\text{-}RAG\text{-}RANKING_{magiclens}$ & \best{60.16} & \best{61.49} & 65.45 & \best{66.67} & \best{69.44} & 58.39 & \best{57.84} & 30.39 & 55.88 & 65.00 \\
+Rerank & E2: Retrieved-RAG-RANKING$_{magiclens}$ & 51.74 & 51.24 & 50.41 & 59.80 & 59.26 & 48.99 & 55.88 & \best{33.33} & 50.00 & 59.17 \\
+Corpus & E3: CLIP-RAG Baseline (Top-5 from corpus) & 50.41 & 52.48 & 54.07 & 48.04 & 54.63 & 46.31 & \best{58.82} & \worst{22.55} & 50.00 & 57.50 \\
+Control & E4: LLaVA+No-RAG & \focusval{53.14} & 56.21 & 56.10 & 55.88 & 57.41 & 47.65 & 55.88 & \best{33.33} & \best{50.98} & 55.83 \\
+Control & E5: $GT\text{-}RAG\text{-}RANKING_{magiclens}$ w/o rerank & \best{60.16} & 59.94 & \best{66.67} & 63.73 & 66.67 & \best{61.74} & 56.86 & 29.41 & \best{57.84} & \best{67.50} \\
 Corpus & E6: $CLIP\text{-}RAG\text{-}RANKING_{magiclens}$ & 50.33 & 54.04 & 49.19 & 55.88 & 51.85 & 46.31 & 56.86 & 27.45 & 49.02 & 56.67 \\
-Corpus & E7: MagicLens-RAG Baseline (Top-5 from corpus) & 47.97 & 51.55 & 47.56 & 45.10 & 48.15 & 46.98 & 50.00 & 32.35 & 50.98 & 51.67 \\
+Corpus & E7: MagicLens-RAG Baseline (Top-5 from corpus) & \worst{47.97} & 51.55 & \worst{47.56} & \worst{45.10} & \worst{48.15} & 46.98 & 50.00 & 32.35 & \best{50.98} & \worst{51.67} \\
 \bottomrule
 \end{tabular}
 }
-\end{table*}
+\end{table}
 
-从现有结果可以得到四个初步判断。第一，MagicLens 在 oracle 候选上的增益说明排序阶段存在优化空间。第二，完整 corpus 检索下的 E3 结果证明粗召回误差不可忽略。第三，E7 的结果表明 MagicLens 可以直接承担全库召回任务，但当前整体稳定性仍不如 CLIP。第四，单纯比较 overall accuracy 还不足以解释检索器价值，必须结合候选覆盖率、场景差异与错误案例共同分析。
+\section{Corpus 线结果分析}
+
+当前已完成的 corpus 线实验包括 E3、E6 与 E7。E3 表明：仅使用 CLIP 从完整 corpus 中召回 Top-5 候选时，整体准确率为 50.41\%（682/1353）。分场景来看，E3 在 \textit{Deformation}、\textit{Others} 和 \textit{Occlusion/Obstruction} 上相对稳定，但在 \textit{Temporal}、\textit{Scope} 和 \textit{Incomplete} 上仍明显偏弱。
+
+E6 对应“CLIP 粗召回 + MagicLens 重排”的混合方案，其整体准确率为 50.33\%，与 E3 基本持平。这说明当前版本的 MagicLens rerank 尚未稳定改善 CLIP 粗召回结果。E7 则评估了 MagicLens 作为 direct retriever 的真实全库召回能力，其整体准确率为 47.97\%，略低于 E3，但在 \textit{Incomplete}、\textit{Biological} 与 \textit{Temporal} 等场景上展现出局部优势。
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth]{corpus_scenario_compare.png}
+\caption{E3、E6 与 E7 在九类细分场景上的准确率柱状图。}
+\label{fig:corpus_scenario_compare}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.76\linewidth]{corpus_scenario_radar.png}
+\caption{场景能力地图雷达图。该图从整体轮廓上展示了 E3、E6 与 E7 在九类场景上的能力边界：CLIP 路线整体更均衡，MagicLens 直检索在 \textit{Incomplete} 与 \textit{Temporal} 上呈现局部凸起，而混合重排方案当前尚未显著改变 CLIP 的主轮廓。}
+\label{fig:corpus_scenario_radar}
+\end{figure}
+
+总体来看，Corpus 线给出四个初步判断：第一，完整 corpus 检索下的粗召回误差不可忽略；第二，MagicLens 重排尚未稳定改善 CLIP 的候选排序；第三，MagicLens 直接检索并非整体优于 CLIP，但在少数关系性场景上具有潜力；第四，仅比较 overall accuracy 不足以解释检索器价值，必须结合候选结构与失败模式一并分析。
 
 \begin{figure}[htbp]
 \centering
@@ -190,8 +362,134 @@ Corpus & E7: MagicLens-RAG Baseline (Top-5 from corpus) & 47.97 & 51.55 & 47.56 
 \label{fig:error_share_by_scenario_compare}
 \end{figure}
 
-\section{结论与后续工作}
+\section{CLIP 与 MagicLens 检索差异深入分析}
 
-本文将当前实验记录整理为论文初稿框架，围绕 MRAG-Bench 展开了研究背景、现状分析、方法设计与初步实验结果的组织。相较于单纯记录实验数值，这一版本更强调“为什么这样设计实验”以及“这些实验结果支撑了什么研究判断”。从当前结果来看，mRAG 中检索器的核心问题并不只是候选精排，而是粗召回与重排之间的协同优化。
+前述 E3 与 E7 的 overall accuracy 差距仅约 2.4 个百分点，但对 1353 个样本逐一比较 Top-5 候选集合后可见，MagicLens 并非在 CLIP 的语义邻域内做轻微扰动，而是在大量 query 上走向了另一套检索偏好。
 
-后续工作将沿三条线继续推进。其一，完成 E6，即在完整 corpus 上实现 CLIP 粗召回与 MagicLens 重排的联合实验；其二，基于 E7 的结果继续分析 MagicLens 作为 direct retriever 的适用场景，判断它更适合作为独立召回器还是精排器；其三，进一步优化 query instruction 设计与检索协议，减少相似度检索与任务需求之间的偏差，并逐步补齐系统流程图、测试用例、错误分析案例与更多图表，为后续扩展为 40 页以上完整论文打下基础。
+\subsection{检索集合差异}
+
+在全部 1353 个样本中，CLIP 与 MagicLens 的 Top-5 候选平均仅重合 0.535 张；909 个样本（67.2\%）的 Top-5 候选完全没有重合，Top-5 完全一致的样本仅 1 个，Top-1 候选相同的样本也只有 204 个（15.1\%）。从答题正确率看，CLIP 正确 682 例，MagicLens 正确 649 例；逐样本胜负统计中，CLIP 胜出 152 例，MagicLens 胜出 119 例，两者都答对 530 例，都答错 552 例。上述结果说明，MagicLens 的确改变了检索证据分布，但这种改变尚未稳定转化为更高的问答准确率。
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth]{overview_plots.png}
+\caption{CLIP 与 MagicLens 检索差异总览。}
+\label{fig:overview_plots}
+\end{figure}
+
+\subsection{分场景检索差异}
+
+表~\ref{tab:scenario_retrieval_diff} 展示了九类场景下两种检索器的逐项对比。从 Top-5 重合度看，\textit{Deformation} 与 \textit{Others} 的重合度较高，说明这两类场景下 CLIP 与 MagicLens 的检索偏好更接近；而 \textit{Biological}、\textit{Partial} 与 \textit{Scope} 三类场景重合度极低，两者几乎检索出完全不同的候选集合。
+
+\begin{table}[htbp]
+\centering
+\scriptsize
+\caption{CLIP 与 MagicLens 在九类场景上的检索差异统计。}
+\label{tab:scenario_retrieval_diff}
+\begin{tabular}{lrrrrrr}
+\toprule
+\textbf{场景} & \textbf{$n$} & \textbf{Top-5 重合} & \textbf{Top-1 同(\%)} & \textbf{CLIP 准(\%)} & \textbf{ML 准(\%)} & \textbf{ML:CLIP 胜} \\
+\midrule
+Angle        & 322 & 0.354 & 10.25 & 52.48 & 51.55 & 25:28 \\
+Biological   & 102 & 0.059 &  0.00 & 50.00 & 50.98 &  6:5  \\
+Deformation  & 102 & 1.667 & 56.86 & 58.82 & 50.00 &  4:13 \\
+Incomplete   & 102 & 0.392 &  4.90 & 22.55 & 32.35 & 17:7  \\
+Obstruction  & 108 & 0.306 &  8.33 & 54.63 & 48.15 &  8:15 \\
+Others       & 120 & 1.500 & 61.67 & 57.50 & 51.67 &  6:13 \\
+Partial      & 246 & 0.215 &  0.81 & 54.07 & 47.56 & 25:41 \\
+Scope        & 102 & 0.235 &  6.86 & 48.04 & 45.10 & 10:13 \\
+Temporal     & 149 & 0.698 & 10.74 & 46.31 & 46.98 & 18:17 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+从胜负计数看，MagicLens 的优势场景主要集中在 \textit{Incomplete} 和 \textit{Temporal}。其中，\textit{Incomplete} 场景要求系统理解“缺少了什么信息”，这更接近关系性与结构性推断，而非简单视觉相似匹配，这也解释了 MagicLens 在该场景上的相对优势。相比之下，CLIP 在 \textit{Partial}、\textit{Deformation}、\textit{Obstruction} 与 \textit{Others} 上更稳定，说明这些场景更依赖局部视觉近邻。
+
+\subsection{Top-1 高频重复偏置}
+
+进一步统计两种检索器 Top-1 候选的重复命中情况，发现 MagicLens 存在明显的“原型图吸附”现象。CLIP 的 Top-1 候选分布较均匀，被重复命中 $\geq 5$ 次的图像仅 1 张；而 MagicLens 中有 57 张图像被 $\geq 5$ 个不同 query 命中为 Top-1，最高达到 39 次。图~\ref{fig:top1_repeat_bias} 给出了对比结果。
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth]{top1_repeat_bias.png}
+\caption{CLIP（左）与 MagicLens（右）的 Top-1 高频重复命中对比。}
+\label{fig:top1_repeat_bias}
+\end{figure}
+
+这一现象说明，MagicLens 在当前 embedding 空间中存在少数高响应“原型图”，query 表征可能被开放式指令的语义维度过度牵引，从而削弱了 query image 的实例级约束。该问题会降低检索多样性，也限制下游模型获得差异化视觉证据的能力。
+
+\section{时间代价与效率目标}
+
+除了准确率，本文还特别关注系统在时间代价上的可接受性。由于方法框架中引入了 pipeline LLM、查询重写与多路检索，若不统计端到端耗时，就很难判断“额外查询侧计算”是否值得。因此，在定稿阶段，第四章应补齐“准确率 + 时间代价”的联合比较，包括：
+\begin{enumerate}[leftmargin=2em]
+\item 查询重写与维度规划阶段的推理时间开销；
+\item 多路 MagicLens 排序与融合阶段的累计耗时；
+\item 不同检索策略在全流程上的总时间与正确率对比。
+\end{enumerate}
+
+这一部分会成为后续定稿中体现方法技术含量与工程价值的重要支撑。
+
+\chapter{总结与展望}
+
+\section{统一评测流水线实现}
+
+为保证不同实验线之间具有可比性，本文构建了统一的评测流水线。该流水线包括数据读取、图像检索、候选拼接、VLM 推理、结果记录和统计分析六个环节。实现上，本文坚持“检索器为唯一变量”的原则：所有实验共享相同的题目输入、相同的视觉语言模型、相同的提示模板以及相同的结果统计脚本。
+
+在数据管理层面，本文将运行日志、逐样本结果、图表资产与论文内容分离组织，使每次实验都可以追溯到对应脚本和输出文件。这一设计不仅服务于论文写作，也使后续补充更多实验、消融分析和案例分析时具有更好的可维护性。
+
+\section{结果资产与论文图表联动}
+
+当前论文中使用的主要图表包括：候选分布统计图、场景分布与 GT 覆盖率图、E0--E7 整体准确率图、控制实验对比图、Corpus 线场景柱状图、错误占比图以及 CLIP/MagicLens 检索差异总览图等。这些图表均来自统一分析脚本生成的结果资产，并已经与论文正文中的关键叙述保持同步。
+
+其中，实验命名与结果总表用于支撑“整体比较”；场景柱状图与检索差异表用于支撑“分项分析”；Top-1 高频重复命中图则用于支撑“失败模式解释”。这种“总表 + 对比图 + 细化统计 + 失败模式”的组织方式，使论文从单一结果罗列转向更完整的问题分析。
+
+\section{本文的创新点}
+
+从当前工作来看，本文的主要创新性体现在以下三个方面：
+\begin{enumerate}[leftmargin=2em]
+\item 在问题建模层面，本文强调 mRAG 所需的并非“最相似图像”，而是“最有助于回答问题的证据图像”，据此将检索问题从视觉近邻匹配重新表述为问题导向证据召回。
+\item 在方法设计层面，本文提出了“CLIP 粗召回 + MagicLens 关系感知重排”的混合检索方法，并明确区分了粗召回、关系建模与候选排序三类能力，而不是将多个现成模块做松散拼接。
+\item 在分析与扩展层面，本文不仅给出了整体性能比较，还发现并验证了 MagicLens 的原型图吸附偏置，并将多维查询构造与结果融合作为可继续迭代的系统扩展方向，使研究从评测分析自然延伸到更可部署的流水线组织方式。
+\end{enumerate}
+
+\section{阶段性成果与当前不足}
+
+本文当前阶段已经形成以下阶段性成果：
+\begin{enumerate}[leftmargin=2em]
+\item 完成 MRAG-Bench 的数据组织复现与候选覆盖再分析；
+\item 提出并实现面向 vision-centric mRAG 的混合检索方法，形成 E0--E7 多条实验线；
+\item 完成 CLIP 与 MagicLens 的整体、分场景和逐样本检索差异分析；
+\item 在论文中形成图、表、方法与结果相互对应的完整初稿结构，使实验结论能够追溯到统一脚本与结果资产。
+\end{enumerate}
+
+与此同时，当前工作仍有若干不足：第一，MagicLens 的 query instruction 设计尚未系统优化；第二，当前实验仍以固定模型评测为主，尚未开展面向检索器的端到端参数学习；第三，系统测试用例与典型错误案例展示仍可进一步补强。这些问题也构成后续工作的主要方向。
+
+\section{总结}
+
+本文围绕 MRAG-Bench 展开了面向 vision-centric mRAG 的混合检索方法与系统实现研究。通过将实验拆分为 rerank line 与 corpus line，本文澄清了局部重排能力与完整图像库召回能力之间的差异。实验表明：在 oracle 候选条件下，MagicLens 重排在局部场景上具备一定价值，但总体收益有限；在完整 corpus 条件下，CLIP 粗召回仍然更稳定，而 MagicLens 直接检索虽未取得更高整体准确率，却在 \textit{Incomplete} 与 \textit{Temporal} 等更依赖关系推断的场景上显示出潜力。
+
+进一步地，本文通过候选重合度、逐样本胜负统计与 Top-1 高频重复分析发现，MagicLens 与 CLIP 的检索行为存在本质差异：二者在 67.2\% 的样本上 Top-5 候选完全不重合，MagicLens 同时存在明显的“原型图吸附”偏置。上述发现说明，当前 mRAG 检索器的核心问题并不只是精排，而在于粗召回、关系建模与 query 表征之间的协同优化；这也为后续从查询侧构造、融合策略与检索器本体改进等角度继续迭代提供了明确方向。
+
+\section{展望}
+
+后续工作将沿三条线继续推进：
+\begin{enumerate}[leftmargin=2em]
+\item 针对 MagicLens 的原型图偏置问题，探索多维 query instruction 设计，将单一问题拆分为 identity-preserving、attribute-seeking 与 complementary-view 等检索维度；
+\item 围绕 \textit{Incomplete} 与 \textit{Temporal} 等优势场景开展更细致的消融实验，验证 MagicLens 在关系驱动检索中的真实适用边界；
+\item 进一步完善“CLIP 粗召回 + 多维 MagicLens 重排 + 融合去重”的混合检索框架，并补充端到端耗时、资源占用与典型案例展示，使方法结论更贴近真实部署约束。
+\end{enumerate}
+
+从更广泛的意义上看，本文的实验链路与分析结论不仅适用于当前的 vision-centric mRAG 场景，也能够为后续扩展到具身智能、脑机接口和类脑记忆系统中的多模态外部记忆检索提供参考。
+
+\cleardoublepage
+\addcontentsline{toc}{chapter}{参考文献}
+\bibliographystyle{unsrt}
+\bibliography{../doc/开题报告LaTeX/ref_ordered}
+
+\chapter*{致\quad 谢}
+\addcontentsline{toc}{chapter}{致\quad 谢}
+本文从选题、实验设计、代码实现到论文整理，得到了导师宋歌老师的耐心指导和持续帮助。在研究推进过程中，老师不仅在研究方向和论文结构上给予了明确建议，也在实验组织、问题拆分和结果分析方面提供了很多启发，使我能够逐步把零散的实验记录整理为较完整的研究主线。在此谨向宋老师表示诚挚的感谢。
+
+同时，感谢实验室和项目协作过程中给予帮助的同学与朋友。大家在数据处理、模型运行、图表讨论和论文修改中的交流，使我在面对复杂问题时能够不断修正思路、保持推进。也感谢学院在本科阶段提供的课程训练与科研实践机会，使我能够逐步完成从课程学习到研究实践的过渡。
+
+最后，感谢家人在本科阶段给予的理解、支持与鼓励。正是因为这些帮助，我才能够持续投入到本课题的学习、实验与写作之中，并最终形成当前这份论文初稿。

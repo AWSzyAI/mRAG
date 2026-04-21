@@ -1,0 +1,30 @@
+# Paths to pull from remote (relative to project root).
+# Usage:
+#   make pull                # preview with this list
+#   make pull y              # apply
+#
+# You can also create named lists, e.g. result.txt:
+#   make pull result         # preview
+#   make pull result y       # apply
+
+# Sync module files:
+Makefile
+module/Makefile
+module/.exclude
+module/.alias
+module/.sync_ssh
+module/pull_list.txt
+module/result.txt
+module/templates/role_prompt.md
+module/scripts/build_rsync_filter.awk
+module/scripts/read_sync_value.awk
+
+# Example code/doc paths:
+README.md
+doc/CURRENT_STATUS_2026-04.md
+
+# Example outputs:
+github/MRAG-Bench/llava_one_vision_gt_rag_results.jsonl
+github/MRAG-Bench/results/
+log/
+results/

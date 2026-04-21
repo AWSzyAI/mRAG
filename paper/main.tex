@@ -1,20 +1,110 @@
-\documentclass[UTF8,fontset=fandol]{ctexart}
+\documentclass[12pt,openany]{report}
+\usepackage[UTF8,fontset=fandol]{ctex}
 \usepackage{amsmath}
 \usepackage{xcolor}
 \usepackage{graphicx}
+\usepackage{subcaption}
 \usepackage{booktabs}
 \usepackage{multirow}
 \usepackage{hyperref}
+\usepackage{pdfpages}
 \usepackage{enumitem}
-\usepackage[a4paper,left=2.2cm,right=2.2cm,top=2.4cm,bottom=2.4cm]{geometry}
-\usepackage[numbers,sort&compress]{natbib}
+\usepackage{setspace}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage[a4paper,left=2.6cm,right=2.6cm,top=2.8cm,bottom=2.8cm]{geometry}
+\usepackage[super,sort&compress]{natbib}
+
 \graphicspath{{images/}}
-\title{基于混合检索器的多模态生成模型研究与实现}
-\author{时子延}
-\date{\today}
+\onehalfspacing
+\AtBeginDocument{\zihao{-4}}
+\setlength{\parindent}{2em}
+\setlength{\parskip}{0pt}
+\setlength{\headheight}{15pt}
+\captionsetup{font={small},labelfont=bf,textfont=normalfont,labelsep=space,justification=centering}
+\titleformat{\chapter}[block]{\centering\bfseries\zihao{3}}{第\,\thechapter\,章}{1em}{}
+\titlespacing*{\chapter}{0pt}{0.5\baselineskip}{0.5\baselineskip}
+\titleformat{\section}[block]{\bfseries\zihao{4}}{\thesection}{0.75em}{}
+\titlespacing*{\section}{0pt}{0.5\baselineskip}{0.5\baselineskip}
+\titleformat{\subsection}[block]{\bfseries\zihao{-4}}{\thesubsection}{0.75em}{}
+\titlespacing*{\subsection}{0pt}{0.5\baselineskip}{0.5\baselineskip}
+\titleformat{\subsubsection}[runin]{\bfseries\zihao{-4}}{\thesubsubsection}{0.75em}{}[。]
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[C]{{\zihao{-5} 南京师范大学计算机与电子信息学院本科毕业论文}}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancyfoot[C]{\zihao{-5}\thepage}
+\fancypagestyle{plain}{
+  \fancyhf{}
+  \fancyhead[C]{{\zihao{-5} 南京师范大学计算机与电子信息学院本科毕业论文}}
+  \renewcommand{\headrulewidth}{0.4pt}
+  \fancyfoot[C]{\zihao{-5}\thepage}
+}
+
+\newcommand{\best}[1]{\textcolor{green!45!black}{\textbf{#1}}}
+\newcommand{\worst}[1]{\textcolor{red!75!black}{\textbf{#1}}}
+\newcommand{\focusval}[1]{\textbf{#1}}
+\newcommand{\thesistitle}{基于混合检索器的多模态生成模型研究与实现}
+\newcommand{\thesisauthor}{时子延}
+\newcommand{\thesisid}{19220422}
+\newcommand{\thesismajor}{人工智能}
+\newcommand{\thesiscollege}{计算机与电子信息学院/人工智能学院}
+\newcommand{\thesisadvisor}{宋歌}
+
 \begin{document}
-\maketitle
+
+\includepdf[pages=-,fitpaper=true,pagecommand={\thispagestyle{empty}}]{时子延毕业论文封面.pdf}
+\clearpage
+
+\pagestyle{plain}
+\pagenumbering{Roman}
+
+\begin{center}
+{\zihao{3}\bfseries 摘\quad 要\par}
+\end{center}
+\addcontentsline{toc}{chapter}{摘\quad 要}
+本文围绕多模态检索增强生成系统中的检索器瓶颈展开研究，目标是在以视觉为中心的多模态检索增强生成（vision-centric mRAG） 场景下提出并验证一种面向问题导向证据召回的混合检索方法与系统实现。与传统文本 RAG 不同，本文关注的问题往往必须依赖外部图像证据才能稳定作答，因此检索阶段是否真正找回“有用图像”会直接决定下游多模态生成模型的回答质量。为此，本文以 MRAG-Bench 为核心评测平台，对数据集候选分布、视觉证据覆盖情况和不同场景难点进行了系统分析，并将实验拆分为局部重排与全库检索两条主线。
+
+在方法上，本文构建了“CLIP 粗召回 + MagicLens 关系感知重排”的混合检索方法，并同时评估 MagicLens 作为 direct retriever 的可行性；在此基础上，进一步讨论了以 Gemma~4 为代表的多维查询构造与多路结果融合等\textbf{推理期}扩展路径，用于在不改动检索器本体参数的前提下增强查询侧表达能力。实验部分在固定下游 VLM 和提示模板的前提下，比较了 GT Oracle、No-RAG、CLIP corpus baseline、MagicLens rerank 与 MagicLens direct retrieval 等多组实验。结果表明：在 oracle 候选条件下，MagicLens 重排能够在部分场景带来收益，但整体提升有限；在完整 corpus 检索条件下，CLIP 粗召回仍然更稳定，而 MagicLens 在 \textit{Incomplete}、\textit{Temporal} 等强调结构缺失与关系理解的场景中展现出潜力。进一步分析发现，MagicLens 与 CLIP 的 Top-5 候选集合在 67.2\% 的样本上完全不重合，说明二者代表着显著不同的检索偏好；与此同时，MagicLens 还存在一定的 Top-1“原型图吸附”偏置，这成为限制其整体稳定性的关键原因。
+
+本文最终完成了一套面向多模态检索方法研究的统一评测与分析流程，补齐了从 benchmark 复现、检索器对比到错误模式分析的实验链路。相关结果不仅为后续优化 MagicLens 查询指令、构建多维混合检索策略提供了依据，也为进一步在查询侧构造、融合策略与系统评测资产化等方向上继续迭代奠定了基础。
+
+\noindent\textbf{关键词：}多模态检索增强生成；混合检索方法；MRAG-Bench；MagicLens；查询链编排
+
+\clearpage
+\begin{center}
+{\zihao{3}\bfseries Abstract\par}
+\end{center}
+\addcontentsline{toc}{chapter}{Abstract}
+This thesis studies the retriever bottleneck in multimodal retrieval-augmented generation and aims to propose and validate a hybrid retrieval method and system implementation for evidence-oriented image retrieval in vision-centric mRAG tasks. Unlike conventional text RAG, many questions in this setting cannot be answered reliably without external visual evidence. Therefore, whether the retriever can actually return useful images directly determines the final answer quality of the downstream multimodal model. To address this issue, the thesis takes MRAG-Bench as the main evaluation platform, analyzes candidate coverage and scenario difficulty, and separates the experiments into two lines: reranking on fixed candidates and full-corpus retrieval.
+
+On the method side, a hybrid retrieval method combining CLIP coarse recall with MagicLens relation-aware reranking is constructed, while MagicLens is also evaluated as a direct retriever. In addition, inference-time extensions such as multi-dimensional query construction and multi-list fusion are discussed to strengthen the query side without updating retriever parameters. Under a fixed VLM and prompt template, the experiments compare GT Oracle, No-RAG, CLIP corpus baseline, MagicLens reranking, and MagicLens direct retrieval. The results show that MagicLens can provide gains in some scenarios under oracle candidates, but its overall improvement is limited. Under full-corpus retrieval, CLIP remains more stable overall, whereas MagicLens shows promise in scenarios such as \textit{Incomplete} and \textit{Temporal}, where structural absence and relation-aware reasoning matter more. Further analysis reveals that CLIP and MagicLens produce completely disjoint Top-5 candidates on 67.2\% of the samples, indicating fundamentally different retrieval preferences. At the same time, MagicLens exhibits a noticeable Top-1 prototype-attraction bias, which becomes an important factor limiting its robustness.
+
+The thesis finally delivers a unified evaluation and analysis pipeline for multimodal retriever research, covering benchmark reproduction, retriever comparison, and error analysis. These results provide a concrete basis for subsequent improvements in query instruction design, multi-view hybrid retrieval strategies, and the expansion of this draft into a complete undergraduate thesis.
+
+\noindent\textbf{Key words:}multimodal retrieval-augmented generation; hybrid retrieval method; MRAG-Bench; MagicLens; query planning
+
+\tableofcontents
+\clearpage
+\pagestyle{fancy}
+\pagenumbering{arabic}
+
 \input{content.tex}
-\bibliographystyle{unsrt}
-\bibliography{../doc/开题报告LaTeX/ref_ordered}
+
+\cleardoublepage
+\chapter*{本科期间主要研究成果}
+\addcontentsline{toc}{chapter}{本科期间主要研究成果}
+
+\section*{发表论文}
+\begin{enumerate}[leftmargin=2em]
+\item 当前阶段暂无正式发表论文，后续将根据本课题研究进展补充。
+\end{enumerate}
+
+\section*{完成项目}
+\begin{enumerate}[leftmargin=2em]
+\item 基于 MRAG-Bench 的多模态检索器统一评测与分析系统；
+\item 基于 CLIP 与 MagicLens 的混合检索器实验流水线；
+\item 面向毕业论文写作的图表生成、结果整理与论文初稿构建工作。
+\end{enumerate}
+
 \end{document}

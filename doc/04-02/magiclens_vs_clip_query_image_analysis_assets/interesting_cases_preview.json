@@ -1,0 +1,202 @@
+[
+  {
+    "qs_id": "1",
+    "scenario": "Obstruction",
+    "overlap": 0,
+    "clip_correct": true,
+    "magic_correct": false,
+    "question": "Can you identify what kind of animal this is?",
+    "clip_top1": "imagenet_val_ILSVRC2012_val_00005099.JPEG",
+    "magic_top1": "imagenet_val_ILSVRC2012_val_00036542.JPEG"
+  },
+  {
+    "qs_id": "10",
+    "scenario": "Scope",
+    "overlap": 0,
+    "clip_correct": false,
+    "magic_correct": true,
+    "question": "Which creature is this?",
+    "clip_top1": "imagenet_val_ILSVRC2012_val_00037656.JPEG",
+    "magic_top1": "imagenet_val_ILSVRC2012_val_00004814.JPEG"
+  },
+  {
+    "qs_id": "13",
+    "scenario": "Angle",
+    "overlap": 0,
+    "clip_correct": true,
+    "magic_correct": false,
+    "question": "Can you identify the particular model of this car?",
+    "clip_top1": "stanfordcars_by_class_archive_car_data_car_data_test_Suzuki Kizashi Sedan 2012_05434.jpg",
+    "magic_top1": "stanfordcars_by_class_archive_car_data_car_data_test_Acura TL Type-S 2008_04400.jpg"
+  },
+  {
+    "qs_id": "20",
+    "scenario": "Angle",
+    "overlap": 0,
+    "clip_correct": true,
+    "magic_correct": false,
+    "question": "Can you identify what type of animal this is?",
+    "clip_top1": "imagenet_val_ILSVRC2012_val_00016125.JPEG",
+    "magic_top1": "imagenet_val_ILSVRC2012_val_00028989.JPEG"
+  },
+  {
+    "qs_id": "23",
+    "scenario": "Partial",
+    "overlap": 0,
+    "clip_correct": true,
+    "magic_correct": false,
+    "question": "Which animal is depicted here?",
+    "clip_top1": "imagenet_val_ILSVRC2012_val_00038150.JPEG",
+    "magic_top1": "imagenet_val_ILSVRC2012_val_00027352.JPEG"
+  },
+  {
+    "qs_id": "34",
+    "scenario": "Temporal",
+    "overlap": 0,
+    "clip_correct": false,
+    "magic_correct": true,
+    "question": "What is the usual size range for this breed?",
+    "clip_top1": "Temporal_Cats_29_input.png",
+    "magic_top1": "Temporal_Cats_0_gt_Kurilian-Bobtail-1.jpg"
+  },
+  {
+    "qs_id": "36",
+    "scenario": "Scope",
+    "overlap": 0,
+    "clip_correct": false,
+    "magic_correct": true,
+    "question": "Can you identify which animal this is?",
+    "clip_top1": "imagenet_val_ILSVRC2012_val_00033047.JPEG",
+    "magic_top1": "imagenet_val_ILSVRC2012_val_00000136.JPEG"
+  },
+  {
+    "qs_id": "46",
+    "scenario": "Temporal",
+    "overlap": 0,
+    "clip_correct": true,
+    "magic_correct": false,
+    "question": "What breed is this cat?",
+    "clip_top1": "Temporal_Cats_29_input.png",
+    "magic_top1": "Temporal_Cats_12_gt_10e845646bfd51ddf822629f51730ae6.jpg"
+  },
+  {
+    "qs_id": "47",
+    "scenario": "Partial",
+    "overlap": 0,
+    "clip_correct": true,
+    "magic_correct": false,
+    "question": "Which animal is this?",
+    "clip_top1": "imagenet_val_ILSVRC2012_val_00037442.JPEG",
+    "magic_top1": "imagenet_val_ILSVRC2012_val_00024722.JPEG"
+  },
+  {
+    "qs_id": "52",
+    "scenario": "Scope",
+    "overlap": 0,
+    "clip_correct": false,
+    "magic_correct": true,
+    "question": "Can you identify this animal?",
+    "clip_top1": "imagenet_val_ILSVRC2012_val_00045963.JPEG",
+    "magic_top1": "imagenet_val_ILSVRC2012_val_00024246.JPEG"
+  },
+  {
+    "qs_id": "60",
+    "scenario": "Angle",
+    "overlap": 0,
+    "clip_correct": true,
+    "magic_correct": false,
+    "question": "Can you identify this animal?",
+    "clip_top1": "imagenet_val_ILSVRC2012_val_00014833.JPEG",
+    "magic_top1": "imagenet_val_ILSVRC2012_val_00000136.JPEG"
+  },
+  {
+    "qs_id": "61",
+    "scenario": "Angle",
+    "overlap": 0,
+    "clip_correct": true,
+    "magic_correct": false,
+    "question": "Can you identify which animal this is?",
+    "clip_top1": "imagenet_val_ILSVRC2012_val_00016829.JPEG",
+    "magic_top1": "imagenet_val_ILSVRC2012_val_00029066.JPEG"
+  },
+  {
+    "qs_id": "76",
+    "scenario": "Incomplete",
+    "overlap": 0,
+    "clip_correct": false,
+    "magic_correct": true,
+    "question": "Which keys are absent?",
+    "clip_top1": "Mechanical_Keyboard_12_input.png",
+    "magic_top1": "Mechanical_Keyboard_9_gt_ggood.png"
+  },
+  {
+    "qs_id": "85",
+    "scenario": "Temporal",
+    "overlap": 0,
+    "clip_correct": false,
+    "magic_correct": true,
+    "question": "What is the standard weight range for this breed?",
+    "clip_top1": "Temporal_Cats_18_input.png",
+    "magic_top1": "imagenet_val_ILSVRC2012_val_00049004.JPEG"
+  },
+  {
+    "qs_id": "86",
+    "scenario": "Angle",
+    "overlap": 0,
+    "clip_correct": false,
+    "magic_correct": true,
+    "question": "Can you identify the exact model of this vehicle?",
+    "clip_top1": "stanfordcars_by_class_archive_car_data_car_data_test_Audi S5 Convertible 2012_06347.jpg",
+    "magic_top1": "Mechanical_Car_0_fp_audi-a4-avant-black-edition-brillian.png"
+  },
+  {
+    "qs_id": "87",
+    "scenario": "Obstruction",
+    "overlap": 0,
+    "clip_correct": true,
+    "magic_correct": false,
+    "question": "Which creature is this?",
+    "clip_top1": "imagenet_val_ILSVRC2012_val_00020489.JPEG",
+    "magic_top1": "imagenet_val_ILSVRC2012_val_00024722.JPEG"
+  },
+  {
+    "qs_id": "96",
+    "scenario": "Partial",
+    "overlap": 0,
+    "clip_correct": true,
+    "magic_correct": false,
+    "question": "Can you identify the exact model of this car?",
+    "clip_top1": "stanfordcars_by_class_archive_car_data_car_data_test_Hyundai Accent Sedan 2012_06143.jpg",
+    "magic_top1": "stanfordcars_by_class_archive_car_data_car_data_test_Suzuki Aerio Sedan 2007_02689.jpg"
+  },
+  {
+    "qs_id": "97",
+    "scenario": "Partial",
+    "overlap": 0,
+    "clip_correct": false,
+    "magic_correct": true,
+    "question": "Can you identify which animal this is?",
+    "clip_top1": "imagenet_val_ILSVRC2012_val_00005621.JPEG",
+    "magic_top1": "imagenet_val_ILSVRC2012_val_00043353.JPEG"
+  },
+  {
+    "qs_id": "103",
+    "scenario": "Angle",
+    "overlap": 0,
+    "clip_correct": false,
+    "magic_correct": true,
+    "question": "Can you tell me the name of this flower?",
+    "clip_top1": "flowers102_jpg_image_03492.jpg",
+    "magic_top1": "flowers102_jpg_image_06117.jpg"
+  },
+  {
+    "qs_id": "111",
+    "scenario": "Partial",
+    "overlap": 0,
+    "clip_correct": true,
+    "magic_correct": false,
+    "question": "Can you identify this animal?",
+    "clip_top1": "imagenet_val_ILSVRC2012_val_00007426.JPEG",
+    "magic_top1": "imagenet_val_ILSVRC2012_val_00036542.JPEG"
+  }
+]

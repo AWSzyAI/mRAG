@@ -1,33 +1,109 @@
+开发：HPC(SSH)
+
 # mRAG
+
 using magiclens to MRAG-BENCH
 
-## 实验线说明
+## 当前优先入口
 
-当前项目中与 corpus 检索相关的实验线如下：
+如果你现在重新进入这个仓库，建议优先看：
 
-- `E3`：`CLIP` 从完整 `corpus` 中召回 `Top-K`，不使用 MagicLens 重排。
-- `E6`：`CLIP` 从完整 `corpus` 中召回 `Top-K`，再由 `MagicLens` 对候选进行 rerank。
-- `E7`：`MagicLens` 直接在完整 `corpus` 上召回 `Top-K`，不经过 CLIP 粗召回。
+1. `doc/CURRENT_STATUS_2026-04.md`
+2. `doc/DATA_LAYOUT.md`（MRAG-Bench 缓存、`data/image_corpus`、`MRAG_HF_HOME` 等目录约定；服务器上可跑 `python scripts/inspect_data_layout.py` 自检）
+3. `doc/04-02/magiclens_vs_clip_query_image_analysis_2026-04-02.md`
+4. `paper/content.tex`
+5. `Makefile`
 
-对应脚本：
+当前项目主线已经不是单纯“把 MagicLens 接到 MRAG-Bench 上”，而是：
 
-- `test/E4.sh`
-- `test/E5.sh`
-- `test/E3.sh`
-- `test/E6.sh`
-- `test/E7.sh`
+`CLIP 粗召回 + MagicLens 关系感知检索/重排 + 多维度 query decomposition + 论文整合`
 
-开跑前可先做预检查：
+当前代码中心正在迁移到 `src/mrag/`，当前实验入口主要在：
 
-- `test/E4_preflight.sh`
-- `test/E5_preflight.sh`
-- `test/E6_preflight.sh`
-- `test/E7_preflight.sh`
+- `test/benchmark_corpus_rag.py`
+- `test/benchmark_magiclens.py`
+- `test/pipeline_multi_dim_rag.py`（主入口）
+- `test/benchmark_multi_dimension_rag.py`（兼容包装入口，转调 `pipeline_multi_dim_rag.py`）
+
+### 服务器数据布局（已验证）
+
+在服务器仓库根目录（有 `Makefile`、`data/`、`models/` 的目录）执行：
+
+```bash
+python scripts/inspect_data_layout.py
+python scripts/inspect_data_layout.py --print-one-corpus-image
+```
+
+当前已验证的典型结果（`/public/home/hzh/mRAG`）：
+
+- 全库语料：`data/image_corpus`（约 19185 张）
+- 数据总目录：`data`（约 19285 张，含 `COCO2017_100` 与 `image_corpus`）
+- MRAG-Bench 缓存：`models/huggingface-mrag/datasets/uclanlp___mrag-bench`
+- HF Hub 缓存：`models/huggingface-mrag/hub`
+
+如果只想快速理解当前阶段，请先读 `doc/CURRENT_STATUS_2026-04.md`，再决定是进入 `paper/`、实验脚本还是同步工作流。
+
+Gemma4 本地推理（文本 + 图文）建议命令：
+
+```bash
+python test/gemma4.py --mode run --image "$(python scripts/inspect_data_layout.py --print-one-corpus-image)"
+```
+
+当前 sync 工作流已经模块化：
+
+- 根目录 `Makefile` 只负责 `include module/Makefile`
+- 真正的 sync 配置与实现都在 `module/`
+- 迁移到新项目时，优先复制整个 `module/`，不要再手工挑 `.sync_ssh/.alias/.exclude`
+
+- 代码存本地+github，rsync到服务器
+- 根据README配置环境并保存镜像
+- 数据通过各种脚本直接从服务器端拉取下载
+- 运行结果从服务器通过rsync拉取到本地分析
+
+
+
+需要手动上传到服务器的文件有：
+```
+data/image_corpus/*
+models/magic_lens_clip_base.pkl
+models/magic_lens_clip_large.pkl
+```
+
+
+
+```
+export LC_ALL=C
+export LANG=C
+
+apt-get update
+apt-get install -y apt-transport-https ca-certificates gnupg curl
+
+curl https://packages.cloud.google.com/apt/doc/apt-key.gpg \
+  | gpg --dearmor -o /usr/share/keyrings/cloud.google.gpg
+
+echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" \
+  > /etc/apt/sources.list.d/google-cloud-sdk.list
+
+apt-get update
+apt-get install -y google-cloud-cli
+
+gsutil cp -R gs://gresearch/magiclens/models ./
+```
 
 
 ## rsync
 NNU服务器（VScode Remote-SSH）无法使用CodeX，Claude Code，只能在本地改代码，在服务器上运行。
+
+服务器中
+```
+sudo apt install -y rsync
+```
+
+本地
 ```bash
+
+brew install rsync
+
 echo "140.82.112.4 github.com" >> /etc/hosts
 cd github
 git clone https://github.com/mragbench/MRAG-Bench.git
@@ -39,11 +115,9 @@ cd ..
 make config
 eval "$(make -s alias)"
 
-# 如果 M2 还是旧版本（没有 pull_list 机制），先引导同步:
+# 如果 M2 还是旧版本（没有 module 化 sync 和 pull_list 机制），先引导同步:
 # scp AC:/home/database/2025/mRAG/Makefile .
-# scp AC:/home/database/2025/mRAG/.alias .
-# scp AC:/home/database/2025/mRAG/pull_list.txt .
-# scp AC:/home/database/2025/mRAG/result.txt .
+# scp -r AC:/home/database/2025/mRAG/module .
 
 # preview sync changes (dry-run only)
 ms
@@ -51,13 +125,13 @@ ms
 # apply sync (local -> remote)
 ms y
 
-# preview pull changes using pull_list.txt (no actual download)
+# preview pull changes using module/pull_list.txt (no actual download)
 make pull
 
-# apply pull using pull_list.txt
+# apply pull using module/pull_list.txt
 make pull y
 
-# preview/apply result artifacts via result.txt
+# preview/apply result artifacts via module/result.txt
 make pull result
 make pull result y
 
@@ -84,6 +158,10 @@ pip install numpy==1.26.4 shortuuid datasets tqdm pillow requests \
   "httpx[socks]" huggingface_hub transformers==4.45.2 protobuf==3.20.3 
 pip install -e ./github/LLaVA-NeXT --no-deps
 pip install hf_transfer
+pip install -U 'transformers>=4.51' accelerate huggingface_hub
+pip install --upgrade 'torch>=2.4' 'torchvision>=0.19' --index-url https://download.pytorch.org/whl/cu121
+# 与上面 torch 大版本对齐，否则 pip 会提示：torchaudio 2.1.x 需要 torch==2.1.2
+pip install --upgrade torchaudio --index-url https://download.pytorch.org/whl/cu121
 
 # 00:04:11
 
@@ -135,43 +213,6 @@ cd github/MRAG-Bench && python eval/score.py -i llava_one_vision_gt_rag_results.
 ```
 
 
-用时：00:43:51.39
-```bash
-(py310) root:~/code/mRAG# cd github/MRAG-Bench && conda activate llava && bash eval/models/run_model.sh  && cd ../../
-[ENV] HF_HOME=/home/user/.cache/huggingface-mrag
-[ENV] HF_HUB_CACHE=/home/user/.cache/huggingface-mrag/hub
-[ENV] HF_DATASETS_CACHE=/home/user/.cache/huggingface-mrag/datasets
-[ENV] http_proxy=<unset> https_proxy=<unset> all_proxy=<unset>
-[ENV] LD_LIBRARY_PATH=<unset>
-Loaded LLaVA model: lmms-lab/llava-onevision-qwen2-7b-ov
-You are using a model of type llava to instantiate a model of type llava_qwen. This is not supported for all configurations of models and can yield errors.
-Overwriting config with {'image_aspect_ratio': 'pad'}
-Loading vision tower: google/siglip-so400m-patch14-384
-Loading checkpoint shards: 100%|█████████████████████████████████████████████████████████████████████████████████| 4/4 [03:47<00:00, 56.99s/it]
-Model Class: LlavaQwenForCausalLM
-[INFO] Loading MRAG-Bench test split...
-[INFO] load_dataset(name=uclanlp/MRAG-Bench, split=test, offline=False, max_retries=1)
-Resolving data files: 100%|█████████████████████████████████████████████████████████████████████████████████| 28/28 [00:00<00:00, 28940.49it/s]
-Resolving data files: 100%|█████████████████████████████████████████████████████████████████████████████████| 28/28 [00:00<00:00, 29974.61it/s]
-[INFO] Dataset loaded in 7.0s
-[INFO] Dataset ready. total=1353
-[INFO] Fetching first sample...
-[INFO] First sample fetched. Starting evaluation.
-MRAG-Bench Eval: 100%|█████████████████████████████████████████████████| 1353/1353 [35:02<00:00,  1.55s/sample, avg_s=1.6, eta_s=0, step_s=1.9]
-(llava) root:~/code/mRAG# cd github/MRAG-Bench && python eval/score.py -i llava_one_vision_gt_rag_results.jsonl && cd ../../
-100%|██████████████████████████████████████████████████████████████████████████████████████████████████| 1353/1353 [00:00<00:00, 386863.00it/s]
-Overall Accuracy: 60.24%
-==================================================
-Partial:  66.67 //246
-Incomplete:  29.41 //102
-Obstruction:  66.67 //108
-Others:  67.5 //120
-Angle:  60.25 //322
-Deformation:  56.86 //102
-Scope:  63.73 //102
-Biological:  57.84 //102
-Temporal:  61.74 //149
-```
 
 ### 模型文件保存位置
 （服务器重启会不会被清除？还是应该放在`/home/user/env/`下面才能持久化，或者直接放在./models ./data? 下次服务器重启如果文件不见了那就这样改，暂时默认路径先用着）：
@@ -223,8 +264,8 @@ cd github/magiclens && conda activate llava && JAX_PLATFORMS=cuda python predict
   --embeddings_out ../../log/predict_one_embeddings.npz
 cd ../..
 
-```
 
+```
 居然在llava环境跑magiclens成功了（
 ```bash
 (llava) ➜ mRAG cd github/magiclens && JAX_PLATFORMS=cuda python predict_one.py \

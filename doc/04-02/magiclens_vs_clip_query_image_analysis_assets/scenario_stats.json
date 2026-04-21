@@ -1,0 +1,101 @@
+[
+  {
+    "scenario": "Angle",
+    "n": 322,
+    "avg_overlap": 0.35403726708074534,
+    "top1_same_rate": 10.248447204968944,
+    "clip_acc": 52.484472049689444,
+    "magic_acc": 51.5527950310559,
+    "clip_win": 28,
+    "magic_win": 25,
+    "no_overlap": 230
+  },
+  {
+    "scenario": "Biological",
+    "n": 102,
+    "avg_overlap": 0.058823529411764705,
+    "top1_same_rate": 0.0,
+    "clip_acc": 50.0,
+    "magic_acc": 50.98039215686274,
+    "clip_win": 5,
+    "magic_win": 6,
+    "no_overlap": 98
+  },
+  {
+    "scenario": "Deformation",
+    "n": 102,
+    "avg_overlap": 1.6666666666666667,
+    "top1_same_rate": 56.86274509803921,
+    "clip_acc": 58.8235294117647,
+    "magic_acc": 50.0,
+    "clip_win": 13,
+    "magic_win": 4,
+    "no_overlap": 17
+  },
+  {
+    "scenario": "Incomplete",
+    "n": 102,
+    "avg_overlap": 0.39215686274509803,
+    "top1_same_rate": 4.901960784313726,
+    "clip_acc": 22.54901960784314,
+    "magic_acc": 32.35294117647059,
+    "clip_win": 7,
+    "magic_win": 17,
+    "no_overlap": 74
+  },
+  {
+    "scenario": "Obstruction",
+    "n": 108,
+    "avg_overlap": 0.3055555555555556,
+    "top1_same_rate": 8.333333333333334,
+    "clip_acc": 54.629629629629626,
+    "magic_acc": 48.148148148148145,
+    "clip_win": 15,
+    "magic_win": 8,
+    "no_overlap": 82
+  },
+  {
+    "scenario": "Others",
+    "n": 120,
+    "avg_overlap": 1.5,
+    "top1_same_rate": 61.666666666666664,
+    "clip_acc": 57.5,
+    "magic_acc": 51.666666666666664,
+    "clip_win": 13,
+    "magic_win": 6,
+    "no_overlap": 19
+  },
+  {
+    "scenario": "Partial",
+    "n": 246,
+    "avg_overlap": 0.21544715447154472,
+    "top1_same_rate": 0.8130081300813008,
+    "clip_acc": 54.0650406504065,
+    "magic_acc": 47.5609756097561,
+    "clip_win": 41,
+    "magic_win": 25,
+    "no_overlap": 201
+  },
+  {
+    "scenario": "Scope",
+    "n": 102,
+    "avg_overlap": 0.23529411764705882,
+    "top1_same_rate": 6.862745098039215,
+    "clip_acc": 48.03921568627451,
+    "magic_acc": 45.09803921568628,
+    "clip_win": 13,
+    "magic_win": 10,
+    "no_overlap": 82
+  },
+  {
+    "scenario": "Temporal",
+    "n": 149,
+    "avg_overlap": 0.697986577181208,
+    "top1_same_rate": 10.738255033557047,
+    "clip_acc": 46.308724832214764,
+    "magic_acc": 46.97986577181208,
+    "clip_win": 17,
+    "magic_win": 18,
+    "no_overlap": 106
+  }
+]

@@ -1,0 +1,6 @@
+# Result artifacts to pull from remote.
+# Usage:
+#   make pull result        # preview
+#   make pull result y      # apply
+
+log/E6

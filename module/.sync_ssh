@@ -1,0 +1,31 @@
+# Sync profiles used by module/Makefile.
+# Select one host via:
+#   SYNC_HOST ?= AB
+
+Host nnu
+  REMOTE_DIR ?= /home/user/code/mRAG
+  CONDA_ENV ?= /home/user/env/envs/py310
+
+Host Ocean-NAT
+  REMOTE_DIR ?= /public/home/hzh/mRAG
+  CONDA_ENV ?= /public/home/hzh/.conda/envs/llava
+
+Host AB
+  REMOTE_DIR ?= /public/home/hzh/mRAG
+  CONDA_ENV ?= /public/home/hzh/.conda/envs/llava
+
+Host WSL
+  REMOTE_DIR ?= /public/home/hzh/mRAG
+  CONDA_ENV ?= /public/home/hzh/.conda/envs/llava
+
+Host AC
+  REMOTE_DIR ?= /home/acszy/2026/mRAG
+  CONDA_ENV ?= /environment/miniconda3/envs/llava
+
+Host featurize
+  REMOTE_DIR ?= /home/featurize/work/mRAG
+  CONDA_ENV ?= /environment/miniconda3/envs/llava
+
+Host zhichuanyun
+  REMOTE_DIR ?= /root/rivermind-data/mRAG
+  CONDA_ENV ?= /opt/conda/envs/llava

@@ -21,9 +21,14 @@ from tqdm.auto import tqdm
 
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT_DIR))
 sys.path.append(str(ROOT_DIR / "github/LLaVA-NeXT"))
 sys.path.append(str(ROOT_DIR / "github/MRAG-Bench/eval"))
 sys.path.append(str(ROOT_DIR / "github/magiclens"))
+
+from src.mrag.transformers_llava_compat import ensure_modeling_utils_chunking_compat  # noqa: E402
+
+ensure_modeling_utils_chunking_compat()
 
 from llava.constants import DEFAULT_IMAGE_TOKEN, IMAGE_TOKEN_INDEX  # noqa: E402
 from llava.conversation import conv_templates  # noqa: E402
@@ -31,6 +36,11 @@ from llava.mm_utils import process_images, tokenizer_image_token  # noqa: E402
 from llava.model.builder import load_pretrained_model  # noqa: E402
 from utils.dataloader import bench_data_loader  # noqa: E402
 from inference import load_model as load_magiclens_model  # noqa: E402
+from src.mrag import llava as core_llava
+from src.mrag import magiclens as core_magiclens
+from src.mrag import mrag_bench as core_bench
+from src.mrag import runtime as core_runtime
+from src.mrag import text as core_text
 
 
 def log(msg: str) -> None:
@@ -316,6 +326,36 @@ def llava_answer(tokenizer, model, image_processor, item, image_files, args):
             max_new_tokens=max(1, int(args.llava_max_new_tokens)),
         )
     return tokenizer.batch_decode(cont, skip_special_tokens=True)[0].strip()
+
+
+# Rebind reusable pipeline logic from src/mrag/.
+log = core_runtime.log
+log_torch_cuda_env = core_runtime.log_torch_cuda_env
+parse_question_and_options = core_text.parse_question_and_options
+extract_choice = core_text.extract_choice
+resolve_bpe_path = core_text.resolve_bpe_path
+build_data_args = core_bench.build_data_args
+get_data_iter_and_total = lambda data_args: core_bench.get_data_iter_and_total(
+    data_args, bench_data_loader, DEFAULT_IMAGE_TOKEN
+)
+infer_dataset_total = core_bench.infer_dataset_total
+preprocess_pil_image = core_magiclens.preprocess_pil_image
+build_magiclens_encoder = core_magiclens.build_magiclens_encoder
+rerank_rag_images = core_magiclens.rerank_rag_images
+load_llava = lambda args: core_llava.load_llava(args, load_pretrained_model, log)
+llava_answer = lambda tokenizer, model, image_processor, item, image_files, args: core_llava.llava_answer(
+    tokenizer,
+    model,
+    image_processor,
+    item,
+    image_files,
+    args,
+    DEFAULT_IMAGE_TOKEN,
+    IMAGE_TOKEN_INDEX,
+    conv_templates,
+    tokenizer_image_token,
+    process_images,
+)
 
 
 def main():

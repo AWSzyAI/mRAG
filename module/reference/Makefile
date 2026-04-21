@@ -546,6 +546,9 @@ role-local:
 		echo "## Notes"; \
 		echo "- main-dev: primary edit and git source of truth"; \
 		echo "- server-runtime: execute workloads, keep data/models/cache local to server"; \
+		echo ""; \
+		echo "## Prompt"; \
+		cat ../templates/role_prompt.md; \
 	} > .agent/ROLE.md; \
 	echo "Wrote local role: .agent/ROLE.md ($$role_kind)"
 
@@ -567,6 +570,9 @@ role-remote:
 			echo "## Notes"; \
 			echo "- This node can run workloads and may receive temporary edits."; \
 			echo "- Pull selected paths back to main-dev via: make pull <list> y"; \
+			echo ""; \
+			echo "## Prompt"; \
+			cat ../templates/role_prompt.md; \
 		} > "$$tmp_file"; \
 	ssh $(SSH_HOST) "mkdir -p '$(REMOTE_DIR)/.agent'"; \
 	rsync -azP -e ssh "$$tmp_file" "$(SSH_HOST):$(REMOTE_DIR)/.agent/ROLE.md"; \

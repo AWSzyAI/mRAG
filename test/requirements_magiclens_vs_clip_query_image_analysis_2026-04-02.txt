@@ -1,0 +1,8 @@
+numpy
+matplotlib
+pillow
+ipython
+datasets
+notebook
+nbconvert
+ipykernel
