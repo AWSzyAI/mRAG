@@ -1,6 +1,28 @@
 #!/usr/bin/env python3
+"""Generate paper figures from experiment logs.
+
+常用方式：
+
+    python paper/scripts/generate_analysis_figures.py
+
+这会重新生成 `paper/images/` 下的全部分析图，其中
+`corpus_scenario_radar.png` 默认画 E0--E7 的全部可比实验，并按雷达
+多边形面积从大到小排序。
+
+如果后续只想重画部分雷达图，可以改 `RADAR_RUNS`；如果新增 E8 全量
+结果，则在 `load_experiment_metrics()` 里补充 E8 的 summary 路径，
+并把 `"E8"` 加入 `RADAR_RUNS` 即可。
+"""
 import json
+import os
 from pathlib import Path
+
+# 在受限环境里，Matplotlib/fontconfig 默认会尝试写用户目录缓存。
+# 这里提前指定到 /tmp，避免重画图时出现一串无关的权限警告。
+os.environ.setdefault("MPLCONFIGDIR", "/tmp/mrag_matplotlib")
+os.environ.setdefault("XDG_CACHE_HOME", "/tmp/mrag_cache")
+Path(os.environ["MPLCONFIGDIR"]).mkdir(parents=True, exist_ok=True)
+Path(os.environ["XDG_CACHE_HOME"]).mkdir(parents=True, exist_ok=True)
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -25,6 +47,40 @@ SCENARIO_ORDER = [
 
 SCENARIO_LABELS = {
     "Obstruction": "Occlusion",
+}
+
+# 雷达图展示的实验集合。之前在 `make_corpus_scenario_radar()` 中写死为
+# ["E3", "E6", "E7"]，所以论文中的雷达图只展示了 corpus 检索线。
+# 现在默认展示 E0--E7；实际绘制顺序会按雷达多边形面积从大到小自动排序。
+RADAR_RUNS = ["E0", "E1", "E2", "E3", "E4", "E5", "E6", "E7"]
+
+EXPERIMENT_NAMES = {
+    "E0": "E0 GT-RAG",
+    "E1": "E1 GT+ML Rerank",
+    "E2": "E2 Retrieved+ML",
+    "E3": "E3 CLIP-RAG",
+    "E4": "E4 No-RAG",
+    "E5": "E5 GT no-rerank",
+    "E6": "E6 CLIP+ML Rerank",
+    "E7": "E7 MagicLens-RAG",
+}
+
+EXPERIMENT_COLORS = {
+    "E0": "#4c78a8",
+    "E1": "#2f6b9a",
+    "E2": "#72b7b2",
+    "E3": "#f58518",
+    "E4": "#9d755d",
+    "E5": "#9ecae9",
+    "E6": "#e45756",
+    "E7": "#54a24b",
+}
+
+# 这两个旧 score 文件缺少 Obstruction/Occlusion 一列；论文总表中已有
+# 对应数值。为了让全量雷达图能覆盖九类场景，这里显式补齐缺失项。
+SCENARIO_VALUE_PATCHES = {
+    "E0": {"Obstruction": 67.59},
+    "E4": {"Obstruction": 57.41},
 }
 
 
@@ -58,6 +114,20 @@ def norm_scenario_dict(raw: dict) -> dict:
         else:
             out[k] = v
     return out
+
+
+def patch_missing_scenarios(run: str, by_scenario: dict) -> dict:
+    patched = dict(by_scenario)
+    patched.update(SCENARIO_VALUE_PATCHES.get(run, {}))
+    return patched
+
+
+def radar_polygon_area(vals: list[float]) -> float:
+    """Return the polar polygon area for equally spaced radar axes."""
+    theta = 2 * np.pi / len(vals)
+    return 0.5 * np.sin(theta) * sum(
+        vals[idx] * vals[(idx + 1) % len(vals)] for idx in range(len(vals))
+    )
 
 
 def make_dataset_scenario_distribution():
@@ -108,7 +178,10 @@ def load_experiment_metrics():
     data = {}
     data["E0"] = {
         "overall": 59.05,
-        "by_scenario": norm_scenario_dict(load_json(ROOT / "log" / "E0-MRAG_BENCH_baseline" / "llava_one_vision_gt_rag_results_score.json")),
+        "by_scenario": patch_missing_scenarios(
+            "E0",
+            norm_scenario_dict(load_json(ROOT / "log" / "E0-MRAG_BENCH_baseline" / "llava_one_vision_gt_rag_results_score.json")),
+        ),
     }
     data["E1"] = {
         "overall": 60.16,
@@ -124,7 +197,10 @@ def load_experiment_metrics():
     }
     data["E4"] = {
         "overall": 53.14,
-        "by_scenario": norm_scenario_dict(load_json(ROOT / "log" / "E4" / "e4_llava_no_rag_results_score.json")),
+        "by_scenario": patch_missing_scenarios(
+            "E4",
+            norm_scenario_dict(load_json(ROOT / "log" / "E4" / "e4_llava_no_rag_results_score.json")),
+        ),
     }
     data["E5"] = {
         "overall": 60.16,
@@ -183,40 +259,86 @@ def make_corpus_scenario_compare(exp):
 
 
 def make_corpus_scenario_radar(exp):
-    order = ["E3", "E6", "E7"]
-    names = {
-        "E3": "E3 CLIP-RAG",
-        "E6": "E6 CLIP+ML Rerank",
-        "E7": "E7 MagicLens-RAG",
-    }
-    colors = {
-        "E3": "#f58518",
-        "E6": "#e45756",
-        "E7": "#54a24b",
-    }
+    """Draw the scenario radar chart.
+
+    The output filename is kept as `corpus_scenario_radar.png` because
+    `paper/content.tex` already references it. The content is now the full
+    E0--E7 scenario ability map rather than only E3/E6/E7. The figure uses
+    two side-by-side radar panels: a 0--100 global view and a tighter view
+    whose outer radius equals the maximum value among all plotted runs.
+    """
+    order = RADAR_RUNS
     labels = [scenario_display(k) for k in SCENARIO_ORDER]
     angles = np.linspace(0, 2 * np.pi, len(labels), endpoint=False).tolist()
     angles += angles[:1]
 
-    fig, ax = plt.subplots(figsize=(8.8, 7.6), subplot_kw={"polar": True})
-    ax.set_theta_offset(np.pi / 2)
-    ax.set_theta_direction(-1)
-    ax.set_xticks(angles[:-1])
-    ax.set_xticklabels(labels, fontsize=9)
-    ax.set_ylim(20, 65)
-    ax.set_yticks([20, 30, 40, 50, 60])
-    ax.set_yticklabels(["20", "30", "40", "50", "60"], fontsize=8)
-    ax.grid(alpha=0.35)
-    ax.set_title("Scenario Ability Map: Corpus Retrieval Pipelines", pad=22)
-
+    values_by_run = {}
     for run in order:
-        vals = [exp[run]["by_scenario"][k] for k in SCENARIO_ORDER]
-        vals += vals[:1]
-        ax.plot(angles, vals, color=colors[run], linewidth=2.2, label=names[run])
-        ax.fill(angles, vals, color=colors[run], alpha=0.10)
+        missing = [k for k in SCENARIO_ORDER if k not in exp[run]["by_scenario"]]
+        if missing:
+            raise KeyError(f"{run} is missing scenario values: {missing}")
+        values_by_run[run] = [exp[run]["by_scenario"][k] for k in SCENARIO_ORDER]
 
-    ax.legend(loc="upper right", bbox_to_anchor=(1.22, 1.12), frameon=False, fontsize=9)
-    fig.tight_layout()
+    max_value = max(max(vals) for vals in values_by_run.values())
+    areas_by_run = {run: radar_polygon_area(vals) for run, vals in values_by_run.items()}
+    order = sorted(order, key=lambda run: areas_by_run[run], reverse=True)
+
+    fig, axes = plt.subplots(1, 2, figsize=(15.2, 7.8), subplot_kw={"polar": True})
+
+    panel_specs = [
+        {
+            "ax": axes[0],
+            "title": "Global scale (0-100)",
+            "ylim": (0, 100),
+            "yticks": [0, 20, 40, 60, 80, 100],
+        },
+        {
+            "ax": axes[1],
+            "title": f"Zoomed scale (max={max_value:.2f})",
+            "ylim": (20, max_value),
+            "yticks": [20, 30, 40, 50, 60, max_value],
+        },
+    ]
+
+    handles = []
+    labels_for_legend = []
+    for spec in panel_specs:
+        ax = spec["ax"]
+        ax.set_theta_offset(np.pi / 2)
+        ax.set_theta_direction(-1)
+        ax.set_xticks(angles[:-1])
+        ax.set_xticklabels(labels, fontsize=8.5)
+        ax.set_ylim(*spec["ylim"])
+        ax.set_yticks(spec["yticks"])
+        ax.set_yticklabels([f"{tick:.0f}" if tick != max_value else f"{tick:.2f}" for tick in spec["yticks"]], fontsize=7.5)
+        ax.grid(alpha=0.35)
+        ax.set_title(spec["title"], pad=22, fontsize=12)
+
+        for run in order:
+            vals = values_by_run[run] + values_by_run[run][:1]
+            line = ax.plot(
+                angles,
+                vals,
+                color=EXPERIMENT_COLORS[run],
+                linewidth=1.8,
+                label=EXPERIMENT_NAMES.get(run, run),
+            )[0]
+            ax.fill(angles, vals, color=EXPERIMENT_COLORS[run], alpha=0.045)
+            if ax is axes[0]:
+                handles.append(line)
+                labels_for_legend.append(EXPERIMENT_NAMES.get(run, run))
+
+    fig.suptitle("Scenario Ability Map: E0-E7 Experiments", y=0.98, fontsize=17)
+    fig.legend(
+        handles,
+        labels_for_legend,
+        loc="lower center",
+        bbox_to_anchor=(0.5, -0.02),
+        ncol=4,
+        frameon=False,
+        fontsize=8.5,
+    )
+    fig.tight_layout(rect=(0, 0.08, 1, 0.94))
     fig.savefig(IMG_DIR / "corpus_scenario_radar.png", dpi=240, bbox_inches="tight")
     plt.close(fig)
 

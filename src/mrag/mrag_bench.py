@@ -6,6 +6,11 @@ import os
 from pathlib import Path
 from types import SimpleNamespace
 
+if os.environ.get("MRAG_ALLOW_HF_NETWORK", "").strip().lower() not in ("1", "true", "yes"):
+    os.environ.setdefault("HF_HUB_OFFLINE", "1")
+    os.environ.setdefault("HF_DATASETS_OFFLINE", "1")
+    os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+
 from datasets import load_dataset
 
 # ``src/mrag/mrag_bench.py`` → repo root is two levels up
@@ -23,6 +28,12 @@ def ensure_mrag_hf_cache_env() -> None:
 
     Uses ``os.environ.setdefault`` so explicit ``HF_HOME`` / ``HF_DATASETS_CACHE`` win.
     """
+    allow_network = os.environ.get("MRAG_ALLOW_HF_NETWORK", "").strip().lower() in ("1", "true", "yes")
+    if not allow_network:
+        os.environ.setdefault("HF_HUB_OFFLINE", "1")
+        os.environ.setdefault("HF_DATASETS_OFFLINE", "1")
+        os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+
     raw = (os.environ.get("MRAG_HF_HOME") or "").strip()
     hf_home: Path | None = None
     if raw:
@@ -83,7 +94,7 @@ def get_data_iter_and_total(data_args, bench_data_loader, image_placeholder):
 def infer_dataset_total(dataset_name: str):
     ensure_mrag_hf_cache_env()
     try:
-        ds = load_dataset(dataset_name, split="test")
+        ds = load_dataset(dataset_name, split="test", download_mode="reuse_dataset_if_exists")
         return len(ds)
     except Exception:
         return None
@@ -91,9 +102,11 @@ def infer_dataset_total(dataset_name: str):
 
 def iter_bench_queries(dataset_name: str):
     ensure_mrag_hf_cache_env()
-    ds = load_dataset(dataset_name, split="test")
+    ds = load_dataset(dataset_name, split="test", download_mode="reuse_dataset_if_exists")
     for item in ds:
         qs = item["question"]
+        image = item["image"].convert("RGB")
+        image_path = getattr(item["image"], "filename", None)
         prompt_question_part = (
             f"{qs}\n Choices:\n"
             f"A: {item['A']}\n"
@@ -110,5 +123,6 @@ def iter_bench_queries(dataset_name: str):
             "gt_choice": item["answer_choice"],
             "scenario": item["scenario"],
             "aspect": item["aspect"],
-            "query_image": item["image"].convert("RGB"),
+            "query_image": image,
+            "query_image_path": image_path if image_path and Path(str(image_path)).is_file() else None,
         }

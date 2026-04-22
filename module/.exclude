@@ -11,7 +11,7 @@ data/image_corpus
 github/magiclens/data/***
 github/magiclens/models/***
 github/MRAG-Bench/.cache/
-github/LLaVA-NeXT/***
+
 github/MRAG-Bench/results/***
 github/MRAG-Bench/llava_one_vision_gt_rag_results.jsonl
 github/scenic/***

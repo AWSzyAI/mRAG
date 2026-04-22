@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-End-to-end multi-dimension RAG pipeline (MRAG-Bench + MagicLens + LLaVA).
+Multi-dimension RAG pipeline (MRAG-Bench + Gemma4/query planner + MagicLens, optional LLaVA).
 
 Module layout (all reusable logic lives under ``src/mrag/``):
 
@@ -10,7 +10,7 @@ Module layout (all reusable logic lives under ``src/mrag/``):
 3. ``src.mrag.multi_dim_pipeline`` — run retrieval per instruction, then fuse lists.
 4. ``src.mrag.fusion`` — RRF / score-sum / voting (used by multi_dim_pipeline).
 5. ``src.mrag.indexing`` — load or build cached MagicLens corpus embeddings.
-6. ``benchmark_corpus_rag`` (test/) — dataset iteration, LLaVA I/O, logging helpers.
+6. Optional LLaVA answer stage for end-to-end A/B/C/D evaluation.
 
 Environment (copy ``example.env`` to ``.env`` at repo root; do not commit secrets):
 
@@ -26,6 +26,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import platform
 import sys
 import time
 import uuid
@@ -66,12 +67,37 @@ def _preload_dotenv_before_jax() -> None:
             pass
 
 
+def _preconfigure_jax_before_import() -> None:
+    """Set MagicLens/JAX runtime knobs before JAX sees the process environment."""
+    if os.environ.get("MRAG_ALLOW_HF_NETWORK", "").strip().lower() not in ("1", "true", "yes"):
+        os.environ.setdefault("HF_HUB_OFFLINE", "1")
+        os.environ.setdefault("HF_DATASETS_OFFLINE", "1")
+        os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+
+    os.environ.setdefault("XLA_PYTHON_CLIENT_PREALLOCATE", "false")
+
+    platform = (os.environ.get("MAGICLENS_JAX_PLATFORMS") or "").strip()
+    argv = sys.argv[1:]
+    for i, arg in enumerate(argv):
+        if arg == "--magiclens-platform" and i + 1 < len(argv):
+            platform = argv[i + 1].strip()
+            break
+        if arg.startswith("--magiclens-platform="):
+            platform = arg.split("=", 1)[1].strip()
+            break
+
+    if platform:
+        os.environ["JAX_PLATFORMS"] = platform
+    elif not os.environ.get("JAX_PLATFORMS"):
+        os.environ["JAX_PLATFORMS"] = "cpu"
+
+
 _preload_dotenv_before_jax()
+_preconfigure_jax_before_import()
 
 import jax
 import numpy as np
 import torch
-from datasets import load_dataset
 from PIL import Image
 from scenic.projects.baselines.clip import tokenizer as clip_tokenizer
 from tqdm.auto import tqdm
@@ -81,17 +107,8 @@ sys.path.append(str(ROOT_DIR / "github/MRAG-Bench/eval"))
 sys.path.append(str(ROOT_DIR / "github/magiclens"))
 
 from inference import load_model as load_magiclens_model  # noqa: E402
+from utils.dataloader import bench_data_loader  # noqa: E402
 
-from benchmark_corpus_rag import (  # noqa: E402
-    extract_choice,
-    iter_bench_queries,
-    llava_answer,
-    load_llava,
-    log,
-    log_torch_cuda_env,
-    parse_question_and_options,
-    resolve_bpe_path,
-)
 from src.mrag import envfile as core_envfile
 from src.mrag import gemma4_dims as core_gemma4_dims
 from src.mrag import gemma4_loader as core_gemma4_loader
@@ -100,6 +117,15 @@ from src.mrag import magiclens as core_magiclens
 from src.mrag import mrag_bench as core_mrag_bench
 from src.mrag import multi_dim_pipeline as mdp
 from src.mrag import query_planner as qp
+from src.mrag import runtime as core_runtime
+from src.mrag import text as core_text
+
+
+log = core_runtime.log
+log_torch_cuda_env = core_runtime.log_torch_cuda_env
+extract_choice = core_text.extract_choice
+parse_question_and_options = core_text.parse_question_and_options
+resolve_bpe_path = core_text.resolve_bpe_path
 
 
 def _resolve_repo_path(path_str: str, root: Path) -> Path:
@@ -107,8 +133,228 @@ def _resolve_repo_path(path_str: str, root: Path) -> Path:
     return p.resolve() if p.is_absolute() else (root / p).resolve()
 
 
+def _load_llava_helpers():
+    from src.mrag.transformers_llava_compat import ensure_modeling_utils_chunking_compat
+
+    ensure_modeling_utils_chunking_compat()
+
+    from llava.constants import DEFAULT_IMAGE_TOKEN, IMAGE_TOKEN_INDEX
+    from llava.conversation import conv_templates
+    from llava.mm_utils import process_images, tokenizer_image_token
+    from llava.model.builder import load_pretrained_model
+
+    from src.mrag import llava as core_llava
+
+    def _patch_llava_assign_meta_compat() -> None:
+        """Fallback to non-assign loading when meta-device guard is triggered."""
+        try:
+            import llava.model.builder as lbuilder
+        except Exception as e:
+            log(f"warning: could not import llava.model.builder for assign/meta patch: {e}")
+            return
+
+        def _wrap_assign_helper(module_obj, helper_name: str, module_tag: str) -> None:
+            helper = getattr(module_obj, helper_name, None)
+            if helper is None or getattr(helper, "_mrag_assign_meta_patch", False):
+                return
+
+            def patched(model_cls, model_name_or_path, **kwargs):
+                try:
+                    return helper(model_cls, model_name_or_path, **kwargs)
+                except RuntimeError as e:
+                    msg = str(e)
+                    if "meta device context manager" not in msg and "torch.set_default_device('meta')" not in msg:
+                        raise
+                    log(f"patched {module_tag}.{helper_name}: retrying without assign=True due to meta-device guard")
+                    return model_cls.from_pretrained(model_name_or_path, **kwargs)
+
+            patched._mrag_assign_meta_patch = True
+            setattr(module_obj, helper_name, patched)
+            log(f"patched {module_tag}.{helper_name} meta-device compatibility")
+
+        _wrap_assign_helper(lbuilder, "_from_pretrained_with_assign", "llava.model.builder")
+
+        try:
+            import llava.model.multimodal_encoder.siglip_encoder as siglip_encoder
+        except Exception as e:
+            log(f"warning: could not import siglip_encoder for assign/meta patch: {e}")
+        else:
+            _wrap_assign_helper(
+                siglip_encoder,
+                "_from_pretrained_with_assign",
+                "llava.model.multimodal_encoder.siglip_encoder",
+            )
+
+    def _patch_llava_qwen_rope_parameters() -> None:
+        try:
+            from llava.model.language_model import llava_qwen as lq
+        except Exception as e:
+            log(f"warning: could not patch LlavaQwen rope_parameters: {e}")
+            return
+
+        if getattr(lq.LlavaQwenForCausalLM, "_mrag_rope_parameters_patch", False):
+            return
+
+        def ensure_rope_parameters(config):
+            if getattr(config, "rope_parameters", None) is None:
+                config.rope_parameters = {}
+            config.rope_parameters.setdefault("rope_type", "default")
+            config.rope_parameters.setdefault("rope_theta", getattr(config, "rope_theta", 1000000.0))
+
+        def patched_init(self, config, *model_args, **model_kwargs):
+            ensure_rope_parameters(config)
+            lq.Qwen2ForCausalLM.__init__(self, config)
+            config.model_type = "llava_qwen"
+            config.rope_scaling = None
+            # Critical for transformers>=4.5x meta-init guard:
+            # prevent vision tower nested from_pretrained inside model __init__.
+            # It will be loaded later by LLaVA builder once outer model load exits.
+            config.delay_load = True
+            # Some LLaVA-NeXT checkpoints set mm_tunable_parts to include
+            # `mm_vision_tower`, which forces immediate vision-tower load even
+            # when delay_load=True. Clear these flags during outer meta-init.
+            if getattr(config, "unfreeze_mm_vision_tower", False):
+                config.unfreeze_mm_vision_tower = False
+            mm_parts = getattr(config, "mm_tunable_parts", None)
+            if isinstance(mm_parts, str) and "mm_vision_tower" in mm_parts:
+                cleaned = ",".join(
+                    part.strip() for part in mm_parts.split(",") if part.strip() and part.strip() != "mm_vision_tower"
+                )
+                config.mm_tunable_parts = cleaned
+            elif isinstance(mm_parts, (list, tuple)) and any(str(part).strip() == "mm_vision_tower" for part in mm_parts):
+                config.mm_tunable_parts = [part for part in mm_parts if str(part).strip() != "mm_vision_tower"]
+            ensure_rope_parameters(config)
+
+            self.model = lq.LlavaQwenModel(config)
+            self.lm_head = lq.nn.Linear(config.hidden_size, config.vocab_size, bias=False)
+            self.post_init()
+
+        lq.LlavaQwenForCausalLM.__init__ = patched_init
+        lq.LlavaQwenForCausalLM._mrag_rope_parameters_patch = True
+        log("patched LlavaQwenForCausalLM rope_parameters compatibility")
+
+    _patch_llava_assign_meta_compat()
+    _patch_llava_qwen_rope_parameters()
+
+    def load_llava(args):
+        return core_llava.load_llava(args, load_pretrained_model, log)
+
+    def llava_answer(tokenizer, model, image_processor, item, image_files, args):
+        return core_llava.llava_answer(
+            tokenizer,
+            model,
+            image_processor,
+            item,
+            image_files,
+            args,
+            DEFAULT_IMAGE_TOKEN,
+            IMAGE_TOKEN_INDEX,
+            conv_templates,
+            tokenizer_image_token,
+            process_images,
+        )
+
+    return load_llava, llava_answer
+
+
+def _ensure_query_image_path(item: dict, cache_dir: Path) -> Path:
+    raw_path = item.get("query_image_path")
+    if raw_path:
+        path = Path(str(raw_path)).expanduser()
+        if path.is_file():
+            return path.resolve()
+
+    query_image = _query_image_from_bench_item(item)
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    safe_id = "".join(ch if ch.isalnum() or ch in ("-", "_") else "_" for ch in str(item["id"]))
+    path = cache_dir / f"{safe_id}.png"
+    if not path.is_file():
+        query_image.save(path)
+    return path.resolve()
+
+
+def _query_image_from_bench_item(item: dict):
+    if "query_image" in item:
+        return item["query_image"]
+    image_files = item.get("image_files") or []
+    if image_files:
+        return image_files[0]
+    raise KeyError("MRAG-Bench item has neither query_image nor image_files[0]")
+
+
+def _path_payload(path_str: str) -> dict:
+    p = Path(path_str)
+    return {"path": str(path_str), "filename": p.name, "id": p.stem}
+
+
+def _rank_row_payload(row: dict) -> dict:
+    payload = _path_payload(str(row["path"]))
+    payload.update(
+        {
+            "rank": int(row["rank"]),
+            "score": float(row["score"]) if "score" in row else None,
+        }
+    )
+    if "fusion_score" in row:
+        payload["fusion_score"] = float(row["fusion_score"])
+    if "fusion_votes" in row:
+        payload["fusion_votes"] = int(row["fusion_votes"])
+    return payload
+
+
+def _fusion_trace(per_dim: list[list[dict]], fused: list[dict], strategy: str) -> list[dict]:
+    by_path: dict[str, list[dict]] = {}
+    for dim_idx, rows in enumerate(per_dim, start=1):
+        for row in rows:
+            path = str(row["path"])
+            entry = {
+                "dim_index": dim_idx,
+                "rank": int(row["rank"]),
+                "score": float(row.get("score", 0.0)),
+            }
+            if strategy == "rrf":
+                entry["rrf_k"] = 60
+                entry["contribution"] = 1.0 / (60 + int(row["rank"]))
+            elif strategy == "score_sum":
+                entry["contribution"] = float(row.get("score", 0.0))
+            elif strategy == "voting":
+                entry["vote"] = 1
+                entry["score_contribution"] = float(row.get("score", 0.0))
+            by_path.setdefault(path, []).append(entry)
+
+    out = []
+    for row in fused:
+        path = str(row["path"])
+        payload = _rank_row_payload(row)
+        payload["source_hits"] = by_path.get(path, [])
+        if strategy == "rrf":
+            payload["fusion_formula"] = "sum(1 / (60 + per_dimension_rank))"
+            payload["fusion_score_recomputed"] = float(sum(h["contribution"] for h in payload["source_hits"]))
+        elif strategy == "score_sum":
+            payload["fusion_formula"] = "sum(per_dimension_similarity_score)"
+            payload["fusion_score_recomputed"] = float(sum(h["contribution"] for h in payload["source_hits"]))
+        elif strategy == "voting":
+            payload["fusion_formula"] = "sort by vote_count desc, then summed similarity score desc"
+            payload["fusion_votes_recomputed"] = int(sum(h["vote"] for h in payload["source_hits"]))
+            payload["fusion_score_recomputed"] = float(sum(h["score_contribution"] for h in payload["source_hits"]))
+        out.append(payload)
+    return out
+
+
+def _augment_question_with_image_descriptions(question_with_choices: str, descriptions: list[dict]) -> str:
+    if not descriptions:
+        return question_with_choices
+    lines = [
+        "Additional visual evidence descriptions generated by Gemma4. "
+        "Use them as auxiliary evidence together with the images; answer with only the option letter.",
+    ]
+    for desc in descriptions:
+        lines.append(f"{desc['image_label']} ({desc['filename']}): {desc['description']}")
+    return "\n".join(lines) + "\n\n" + question_with_choices
+
+
 def build_arg_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(description="Multi-dimension query LLM + MagicLens + fusion + LLaVA pipeline")
+    p = argparse.ArgumentParser(description="Multi-dimension query LLM + MagicLens + fusion pipeline")
     p.add_argument("--dataset-name", type=str, default="uclanlp/MRAG-Bench")
     p.add_argument("--corpus-dir", type=str, required=True)
     p.add_argument("--corpus-cache-dir", type=str, default=str(ROOT_DIR / "results/corpus_index"))
@@ -164,6 +410,16 @@ def build_arg_parser() -> argparse.ArgumentParser:
         default=int((os.environ.get("GEMMA4_DIM_MAX_NEW_TOKENS") or "512").strip() or "512"),
     )
     p.add_argument(
+        "--gemma4-dim-rationale",
+        action="store_true",
+        help="For gemma4_local, generate per-dimension rationale and store it in trace/dims outputs.",
+    )
+    p.add_argument(
+        "--dim-retrieval-use-rationale",
+        action="store_true",
+        help="Prefix each retrieval query with its rationale: '<rationale>; <query>' to inject explicit CoT-style guidance into MagicLens retrieval.",
+    )
+    p.add_argument(
         "--gemma4-hf-token",
         type=str,
         default=os.environ.get("GEMMA4_HF_TOKEN", "") or os.environ.get("HF_TOKEN", ""),
@@ -180,7 +436,21 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--magiclens-batch-size", type=int, default=16)
     p.add_argument("--bpe-path", type=str, default="")
     p.add_argument("--magiclens-disable-jit", action="store_true")
+    p.add_argument(
+        "--magiclens-platform",
+        type=str,
+        default=os.environ.get("MAGICLENS_JAX_PLATFORMS", os.environ.get("JAX_PLATFORMS", "cpu")),
+        choices=["cpu", "cuda", "gpu"],
+        help="JAX platform for MagicLens. Default cpu avoids GPU cuDNN/runtime conflicts on shared nodes.",
+    )
 
+    p.add_argument(
+        "--final-answerer",
+        type=str,
+        default=os.environ.get("FINAL_ANSWERER", "none"),
+        choices=["none", "llava"],
+        help="none writes Gemma4 dimensions + MagicLens candidates only; llava loads LLaVA for A/B/C/D evaluation.",
+    )
     p.add_argument("--llava-model-path", type=str, default=str(ROOT_DIR / "models/llava-onevision-qwen2-7b-ov"))
     p.add_argument("--llava-device-map", type=str, default="auto")
     p.add_argument("--llava-attn-implementation", type=str, default="sdpa")
@@ -189,18 +459,55 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--llava-allow-cpu-offload", action="store_true")
     p.add_argument("--llava-max-new-tokens", type=int, default=4096)
     p.add_argument("--llava-num-beams", type=int, default=1)
+    p.add_argument(
+        "--llava-max-images",
+        type=int,
+        default=1,
+        help="Maximum number of images passed to LLaVA per sample (including query image). "
+        "Use 1 for stability if multi-image inference triggers CUDA device-side asserts.",
+    )
 
     p.add_argument("--answers-file", type=str, default=str(ROOT_DIR / "log/E8/e8_multi_dim_rag_results.jsonl"))
     p.add_argument("--summary-out", type=str, default=str(ROOT_DIR / "log/E8/e8_multi_dim_rag_summary.json"))
     p.add_argument("--save-dimensions-jsonl", type=str, default="")
+    p.add_argument(
+        "--trace-jsonl",
+        type=str,
+        default="",
+        help="Optional detailed per-sample trace JSONL with prompts, 5x5 retrieval, fusion, descriptions, timings, and scoring.",
+    )
+    p.add_argument(
+        "--describe-final-images",
+        action="store_true",
+        help="Use Gemma4 to describe the query image and final fused images, then append descriptions to the LLaVA question.",
+    )
+    p.add_argument(
+        "--gemma4-description-max-new-tokens",
+        type=int,
+        default=int((os.environ.get("GEMMA4_DESCRIPTION_MAX_NEW_TOKENS") or "160").strip() or "160"),
+    )
+    p.add_argument(
+        "--query-image-cache-dir",
+        type=str,
+        default=str(ROOT_DIR / "results/query_images/mrag_bench"),
+        help="Local PNG cache for dataset query images passed to Gemma4.",
+    )
     p.add_argument("--start-index", type=int, default=0)
     p.add_argument("--max-samples", type=int, default=0)
+    p.add_argument(
+        "--resume-from-existing",
+        action="store_true",
+        help="Resume from existing outputs: skip qs_id already present in answers-file and append new rows.",
+    )
     return p
 
 
 def run_benchmark(args: argparse.Namespace) -> None:
     core_envfile.load_dotenv(ROOT_DIR / ".env")
     core_mrag_bench.ensure_mrag_hf_cache_env()
+    if args.magiclens_platform:
+        jax.config.update("jax_platforms", args.magiclens_platform)
+        log(f"magiclens_jax_platform={args.magiclens_platform}")
 
     answers_path = Path(args.answers_file)
     answers_path.parent.mkdir(parents=True, exist_ok=True)
@@ -209,6 +516,10 @@ def run_benchmark(args: argparse.Namespace) -> None:
     dims_path = Path(args.save_dimensions_jsonl) if args.save_dimensions_jsonl else None
     if dims_path:
         dims_path.parent.mkdir(parents=True, exist_ok=True)
+    trace_path = Path(args.trace_jsonl) if args.trace_jsonl else None
+    if trace_path:
+        trace_path.parent.mkdir(parents=True, exist_ok=True)
+    query_image_cache_dir = _resolve_repo_path(args.query_image_cache_dir, ROOT_DIR)
 
     api_key = (args.dim_generator_api_key or os.environ.get("DIM_GENERATOR_API_KEY", "")).strip()
     dim_model_tag = args.gemma4_model_id if args.dim_generator_type == "gemma4_local" else args.dim_generator_model
@@ -218,6 +529,10 @@ def run_benchmark(args: argparse.Namespace) -> None:
         f"n_dims={args.n_dims} dim_top_k={args.dim_top_k} final_top_k={args.final_top_k} fusion={args.fusion_strategy}"
     )
     log(f"dim_generator_type={args.dim_generator_type} dim_model={dim_model_tag}")
+    if args.trace_jsonl:
+        log(f"trace_jsonl={args.trace_jsonl}")
+    if args.describe_final_images:
+        log(f"describe_final_images=1 max_new_tokens={args.gemma4_description_max_new_tokens}")
 
     bpe_path = resolve_bpe_path(args.bpe_path)
     tokenizer_fn = (
@@ -235,7 +550,19 @@ def run_benchmark(args: argparse.Namespace) -> None:
     corpus_paths, corpus_embeds = core_indexing.load_or_build_magiclens_corpus_index(args, encode_fn, tokenizer_fn)
     log(f"corpus_size={len(corpus_paths)}")
 
-    llava_tokenizer, llava_model, llava_image_processor = load_llava(args)
+    llava_tokenizer = llava_model = llava_image_processor = None
+    llava_answer = None
+    if args.final_answerer == "llava":
+        unified_cuda = args.gemma4_device.strip()
+        if unified_cuda.startswith("cuda"):
+            old_map = str(args.llava_device_map)
+            args.llava_device_map = unified_cuda
+            log(f"unified_cuda_device={unified_cuda} llava_device_map_override: {old_map} -> {args.llava_device_map}")
+        load_llava, llava_answer = _load_llava_helpers()
+        llava_tokenizer, llava_model, llava_image_processor = load_llava(args)
+        log("LLaVA model ready")
+    else:
+        log("final_answerer=none; skipping LLaVA/model answer stage")
 
     local_pipeline = None
     gemma_processor = None
@@ -268,10 +595,19 @@ def run_benchmark(args: argparse.Namespace) -> None:
         gemma_model.eval()
         log(f"gemma4_dim_generator_ready model_id={args.gemma4_model_id} local_dir={gdir} device={dev}")
 
-    try:
-        total = len(load_dataset(args.dataset_name, split="test"))
-    except Exception:
-        total = None
+    data_args = argparse.Namespace(
+        dataset_name=args.dataset_name,
+        test_size=10**9,
+        use_rag=False,
+        use_retrieved_examples=False,
+        extra_prompt="",
+    )
+    log("mrag_bench_loader=official bench_data_loader use_rag=False")
+    data_iter, total = core_mrag_bench.get_data_iter_and_total(data_args, bench_data_loader, "<image>")
+    if total is None:
+        log("dataset_total=provided_by_official_dataloader_progress")
+    else:
+        log(f"dataset_total={total}")
 
     processed = 0
     correct = 0
@@ -280,145 +616,410 @@ def run_benchmark(args: argparse.Namespace) -> None:
     retrieval_times: list[float] = []
     dim_gen_failures = 0
 
-    dims_out = open(dims_path, "w", encoding="utf-8") if dims_path else None
+    seen_qs_ids: set[str] = set()
+    if args.resume_from_existing and answers_path.is_file():
+        try:
+            with open(answers_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    s = line.strip()
+                    if not s:
+                        continue
+                    row = json.loads(s)
+                    qs_id = str(row.get("qs_id", "")).strip()
+                    if qs_id:
+                        seen_qs_ids.add(qs_id)
+                        processed += 1
+                        is_correct = bool(row.get("meta_is_correct", False))
+                        if is_correct:
+                            correct += 1
+                        scenario = str(row.get("scenario", "Unknown"))
+                        stat = by_scenario.setdefault(scenario, {"total": 0, "correct": 0})
+                        stat["total"] += 1
+                        if is_correct:
+                            stat["correct"] += 1
+            log(f"resume_from_existing=1 loaded_existing_rows={len(seen_qs_ids)} from {answers_path}")
+        except Exception as e:
+            log(f"warning: failed to load existing answers for resume: {e}")
+            seen_qs_ids = set()
 
-    with open(answers_path, "w", encoding="utf-8", buffering=1) as out:
-        for idx, item in enumerate(tqdm(iter_bench_queries(args.dataset_name), total=total, desc="pipeline-multi-dim")):
-            if idx < args.start_index:
-                continue
-            if args.max_samples > 0 and processed >= args.max_samples:
-                break
+    out_mode = "a" if args.resume_from_existing else "w"
+    dims_out = open(dims_path, out_mode, encoding="utf-8") if dims_path else None
+    trace_out = open(trace_path, out_mode, encoding="utf-8", buffering=1) if trace_path else None
 
-            question_text, _ = parse_question_and_options(item["prompt_question_part"])
+    try:
+        with open(answers_path, out_mode, encoding="utf-8", buffering=1) as out:
+            for idx, item in enumerate(data_iter):
+                if idx < args.start_index:
+                    continue
+                if args.max_samples > 0 and processed >= args.max_samples:
+                    break
+                qs_id = str(item.get("id"))
+                if qs_id in seen_qs_ids:
+                    continue
 
-            t0 = time.time()
-            try:
-                if args.dim_generator_type == "api":
-                    dim_instructions = qp.generate_retrieval_instructions(
-                        question_text,
-                        args.n_dims,
-                        backend="api",
-                        api_base=args.dim_generator_api_base,
-                        api_key=api_key,
-                        api_model=args.dim_generator_model,
-                        temperature=args.dim_generator_temperature,
+                sample_started_at = time.strftime("%Y-%m-%d %H:%M:%S")
+                sample_t0 = time.time()
+                question_with_choices = item["prompt_question_part"]
+                question_text, _ = parse_question_and_options(question_with_choices)
+                query_image = _query_image_from_bench_item(item)
+                query_image_path = _ensure_query_image_path(item, query_image_cache_dir)
+
+                t0 = time.time()
+                dim_gen_error = None
+                dim_rationales: list[str] = []
+                dim_generation_raw_text = ""
+                try:
+                    if args.dim_generator_type == "api":
+                        dim_instructions = qp.generate_retrieval_instructions(
+                            question_with_choices,
+                            args.n_dims,
+                            backend="api",
+                            api_base=args.dim_generator_api_base,
+                            api_key=api_key,
+                            api_model=args.dim_generator_model,
+                            temperature=args.dim_generator_temperature,
+                        )
+                    elif args.dim_generator_type == "gemma4_local":
+                        if args.gemma4_dim_rationale:
+                            plan = core_gemma4_dims.generate_retrieval_plan_with_rationales_gemma4(
+                                gemma_processor,
+                                gemma_model,
+                                query_image=query_image_path,
+                                question=question_with_choices,
+                                n_dims=args.n_dims,
+                                max_new_tokens=max(640, args.gemma4_max_new_tokens),
+                            )
+                            dim_instructions = plan.get("queries", [])
+                            dim_rationales = plan.get("rationales", [])
+                            dim_generation_raw_text = str(plan.get("raw_text", ""))
+                        else:
+                            dim_instructions = core_gemma4_dims.generate_retrieval_instructions_gemma4(
+                                gemma_processor,
+                                gemma_model,
+                                query_image=query_image_path,
+                                question=question_with_choices,
+                                n_dims=args.n_dims,
+                                max_new_tokens=args.gemma4_max_new_tokens,
+                            )
+                    else:
+                        dim_instructions = qp.generate_retrieval_instructions(
+                            question_with_choices,
+                            args.n_dims,
+                            backend="local",
+                            local_pipeline=local_pipeline,
+                        )
+                except Exception as e:
+                    dim_gen_error = str(e)
+                    log(f"dimension_gen_error qs_id={item.get('id')}: {e}")
+                    dim_instructions = []
+                t_dim = time.time() - t0
+                dim_gen_times.append(t_dim)
+
+                if not dim_instructions:
+                    dim_gen_failures += 1
+                    dim_instructions = (
+                        [question_with_choices] if not args.fallback_instruction else [args.fallback_instruction]
                     )
-                elif args.dim_generator_type == "gemma4_local":
-                    dim_instructions = core_gemma4_dims.generate_retrieval_instructions_gemma4(
-                        gemma_processor,
-                        gemma_model,
-                        query_image=item["query_image"],
-                        question=question_text,
-                        n_dims=args.n_dims,
-                        max_new_tokens=args.gemma4_max_new_tokens,
-                    )
+                    if not dim_rationales:
+                        dim_rationales = ["fallback: dimension generation failed, using fallback instruction"]
+
+                retrieval_queries = list(dim_instructions)
+                if args.dim_retrieval_use_rationale and dim_rationales:
+                    retrieval_queries = []
+                    for i, q in enumerate(dim_instructions):
+                        r = dim_rationales[i] if i < len(dim_rationales) else ""
+                        r = " ".join(str(r).split())
+                        q = " ".join(str(q).split())
+                        retrieval_queries.append(f"{r}; {q}" if r else q)
+
+                t0 = time.time()
+                per_dim, fused = mdp.multi_dim_magiclens_retrieve_and_fuse(
+                    query_image,
+                    retrieval_queries,
+                    corpus_paths,
+                    corpus_embeds,
+                    encode_fn,
+                    tokenizer_fn,
+                    dim_top_k=args.dim_top_k,
+                    fusion_strategy=args.fusion_strategy,
+                    final_top_k=args.final_top_k,
+                )
+                t_ret = time.time() - t0
+                retrieval_times.append(t_ret)
+
+                descriptions: list[dict] = []
+                t_desc = 0.0
+                if args.describe_final_images:
+                    t0 = time.time()
+                    desc_inputs = [{"image_label": "query_image", "path": str(query_image_path)}]
+                    for rank, f in enumerate(fused, start=1):
+                        desc_inputs.append({"image_label": f"retrieved_rank_{rank}", "path": str(f["path"])})
+                    for desc_input in desc_inputs:
+                        desc_path = desc_input["path"]
+                        try:
+                            text = core_gemma4_dims.describe_image_for_question_gemma4(
+                                gemma_processor,
+                                gemma_model,
+                                image_path=desc_path,
+                                question=question_with_choices,
+                                image_label=desc_input["image_label"],
+                                max_new_tokens=args.gemma4_description_max_new_tokens,
+                            )
+                            err = None
+                        except Exception as e:
+                            text = ""
+                            err = str(e)
+                            log(f"image_description_error qs_id={item.get('id')} image={desc_input['image_label']}: {e}")
+                        pinfo = _path_payload(desc_path)
+                        descriptions.append(
+                            {
+                                "image_label": desc_input["image_label"],
+                                "path": pinfo["path"],
+                                "filename": pinfo["filename"],
+                                "id": pinfo["id"],
+                                "description": text,
+                                "error": err,
+                            }
+                        )
+                    t_desc = time.time() - t0
+
+                llava_prompt_question_part = question_with_choices
+                if descriptions:
+                    llava_prompt_question_part = _augment_question_with_image_descriptions(question_with_choices, descriptions)
+
+                t_llava = 0.0
+                llava_error = None
+                if args.final_answerer == "llava":
+                    image_files = [query_image]
+                    for fi in fused:
+                        with Image.open(fi["path"]) as img:
+                            image_files.append(img.convert("RGB"))
+                    max_images = max(1, int(args.llava_max_images))
+                    if len(image_files) > max_images:
+                        image_files = image_files[:max_images]
+                    llava_item = dict(item)
+                    llava_item["prompt_question_part"] = llava_prompt_question_part
+                    llava_item["question"] = llava_prompt_question_part
+                    t0 = time.time()
+                    try:
+                        raw_output = llava_answer(
+                            llava_tokenizer,
+                            llava_model,
+                            llava_image_processor,
+                            llava_item,
+                            image_files,
+                            args,
+                        )
+                        pred_choice = extract_choice(raw_output)
+                    except Exception as e:
+                        raw_output = ""
+                        pred_choice = "N/A"
+                        llava_error = str(e)
+                        log(f"llava_answer_error qs_id={item.get('id')}: {e}")
+                    t_llava = time.time() - t0
                 else:
-                    dim_instructions = qp.generate_retrieval_instructions(
-                        question_text,
-                        args.n_dims,
-                        backend="local",
-                        local_pipeline=local_pipeline,
+                    image_files = [query_image]
+                    raw_output = ""
+                    pred_choice = "N/A"
+
+                qs_id = str(item["id"])
+                gt_choice = str(item["gt_choice"])
+                scenario = str(item["scenario"])
+                is_correct = args.final_answerer == "llava" and pred_choice == gt_choice
+                sample_total = time.time() - sample_t0
+                row = {
+                    "qs_id": qs_id,
+                    "prompt": item["prompt"],
+                    "output": raw_output,
+                    "gt_answer": item["answer"],
+                    "shortuuid": uuid.uuid4().hex,
+                    "model_id": f"{args.final_answerer}_multidim_{dim_model_tag.split('/')[-1]}_{args.fusion_strategy}",
+                    "gt_choice": gt_choice,
+                    "scenario": scenario,
+                    "aspect": item["aspect"],
+                    "meta_pred_choice": pred_choice,
+                    "meta_is_correct": is_correct,
+                    "meta_rag_count": len(fused),
+                    "meta_rag_source": "multi_dimension_magiclens_pipeline",
+                    "meta_n_dims": args.n_dims,
+                    "meta_dim_instructions": dim_instructions,
+                    "meta_dim_rationales": dim_rationales,
+                    "meta_dim_retrieval_queries": retrieval_queries,
+                    "meta_fusion_strategy": args.fusion_strategy,
+                    "meta_dim_generator_model": dim_model_tag,
+                    "meta_dim_generator_type": args.dim_generator_type,
+                    "meta_fused_retrieval": [
+                        {"rank": f["rank"], "path": f["path"], "fusion_score": f.get("fusion_score", f.get("fused_score"))}
+                        for f in fused
+                    ],
+                    "meta_per_dim_retrieval": [
+                        [{"rank": r["rank"], "path": r["path"], "score": r["score"]} for r in dim_res]
+                        for dim_res in per_dim
+                    ],
+                    "meta_timings_sec": {
+                        "dim_generation": round(t_dim, 3),
+                        "magiclens_retrieval_and_fusion": round(t_ret, 3),
+                        "gemma4_image_descriptions": round(t_desc, 3),
+                        "llava_answer": round(t_llava, 3),
+                        "sample_total": round(sample_total, 3),
+                    },
+                    "meta_llava_error": llava_error,
+                    "meta_llava_image_count": len(image_files),
+                }
+                out.write(json.dumps(row, ensure_ascii=False) + "\n")
+
+                if trace_out:
+                    trace = {
+                        "trace_schema": "gemma4_multi_dim_rag_trace_v1",
+                        "sample": {
+                            "index": idx,
+                            "qs_id": qs_id,
+                            "scenario": scenario,
+                            "aspect": item["aspect"],
+                            "gt_choice": gt_choice,
+                            "gt_answer": item["answer"],
+                            "started_at": sample_started_at,
+                        },
+                        "runtime": {
+                            "python": sys.version.split()[0],
+                            "platform": platform.platform(),
+                            "torch_cuda_available": torch.cuda.is_available(),
+                            "torch_cuda_device_count": torch.cuda.device_count() if torch.cuda.is_available() else 0,
+                            "jax_backend": jax.default_backend(),
+                        },
+                        "models": {
+                            "dim_generator_type": args.dim_generator_type,
+                            "dim_generator_model": dim_model_tag,
+                            "gemma4_local_dir": str(_resolve_repo_path(args.gemma4_local_dir, ROOT_DIR)),
+                            "gemma4_device": args.gemma4_device,
+                            "magiclens_model_size": args.magiclens_model_size,
+                            "magiclens_model_path": str(_resolve_repo_path(args.magiclens_model_path, ROOT_DIR)),
+                            "magiclens_platform": args.magiclens_platform,
+                            "final_answerer": args.final_answerer,
+                            "llava_model_path": str(_resolve_repo_path(args.llava_model_path, ROOT_DIR)),
+                        },
+                        "input": {
+                            "query_image": _path_payload(str(query_image_path)),
+                            "question": question_text,
+                            "question_with_choices": question_with_choices,
+                            "official_prompt": item["prompt"],
+                        },
+                        "dimension_generation": {
+                            "n_dims_requested": args.n_dims,
+                            "prompt_input": {
+                                "query_image_path": str(query_image_path),
+                                "question_with_choices": question_with_choices,
+                                "max_new_tokens": args.gemma4_max_new_tokens,
+                                "with_rationale": bool(args.gemma4_dim_rationale),
+                            },
+                            "queries": [
+                                {
+                                    "dim_index": i,
+                                    "query": instr,
+                                    "rationale": dim_rationales[i - 1] if i - 1 < len(dim_rationales) else "",
+                                    "retrieval_query": retrieval_queries[i - 1] if i - 1 < len(retrieval_queries) else instr,
+                                }
+                                for i, instr in enumerate(dim_instructions, start=1)
+                            ],
+                            "raw_generation_text": dim_generation_raw_text,
+                            "error": dim_gen_error,
+                            "time_sec": round(t_dim, 3),
+                        },
+                        "magiclens_retrieval": {
+                            "dim_top_k": args.dim_top_k,
+                            "calls": [
+                                {
+                                    "dim_index": i,
+                                    "query": dim_instructions[i - 1] if i - 1 < len(dim_instructions) else "",
+                                    "top_k": [_rank_row_payload(r) for r in rows],
+                                }
+                                for i, rows in enumerate(per_dim, start=1)
+                            ],
+                            "time_sec": round(t_ret, 3),
+                        },
+                        "fusion": {
+                            "strategy": args.fusion_strategy,
+                            "input_candidate_count": sum(len(rows) for rows in per_dim),
+                            "unique_candidate_count": len({str(r["path"]) for rows in per_dim for r in rows}),
+                            "final_top_k": args.final_top_k,
+                            "selected": _fusion_trace(per_dim, fused, args.fusion_strategy),
+                        },
+                        "gemma4_image_descriptions": {
+                            "enabled": bool(args.describe_final_images),
+                            "max_new_tokens": args.gemma4_description_max_new_tokens,
+                            "items": descriptions,
+                            "time_sec": round(t_desc, 3),
+                        },
+                        "llava_answer": {
+                            "enabled": args.final_answerer == "llava",
+                            "image_sequence": [
+                                {"slot": 0, "image_label": "query_image", **_path_payload(str(query_image_path))}
+                            ]
+                            + [
+                                {"slot": rank, "image_label": f"retrieved_rank_{rank}", **_path_payload(str(f["path"]))}
+                                for rank, f in enumerate(fused, start=1)
+                            ],
+                            "prompt_question_part": llava_prompt_question_part,
+                            "raw_output": raw_output,
+                            "pred_choice": pred_choice,
+                            "gt_choice": gt_choice,
+                            "is_correct": is_correct,
+                            "time_sec": round(t_llava, 3),
+                        },
+                        "timings_sec": row["meta_timings_sec"],
+                    }
+                    trace_out.write(json.dumps(trace, ensure_ascii=False) + "\n")
+
+                if dims_out:
+                    dims_out.write(
+                        json.dumps(
+                            {
+                                "qs_id": qs_id,
+                                "question": question_text,
+                                "question_with_choices": question_with_choices,
+                                "instructions": dim_instructions,
+                                "rationales": dim_rationales,
+                                "retrieval_queries": retrieval_queries,
+                                "raw_generation_text": dim_generation_raw_text,
+                                "dim_gen_time": round(t_dim, 3),
+                            },
+                            ensure_ascii=False,
+                        )
+                        + "\n"
                     )
-            except Exception as e:
-                log(f"dimension_gen_error qs_id={item.get('id')}: {e}")
-                dim_instructions = []
-            t_dim = time.time() - t0
-            dim_gen_times.append(t_dim)
 
-            if not dim_instructions:
-                dim_gen_failures += 1
-                dim_instructions = (
-                    [question_text] if not args.fallback_instruction else [args.fallback_instruction]
-                )
-
-            t0 = time.time()
-            per_dim, fused = mdp.multi_dim_magiclens_retrieve_and_fuse(
-                item["query_image"],
-                dim_instructions,
-                corpus_paths,
-                corpus_embeds,
-                encode_fn,
-                tokenizer_fn,
-                dim_top_k=args.dim_top_k,
-                fusion_strategy=args.fusion_strategy,
-                final_top_k=args.final_top_k,
-            )
-            t_ret = time.time() - t0
-            retrieval_times.append(t_ret)
-
-            image_files = [item["query_image"]]
-            for fi in fused:
-                with Image.open(fi["path"]) as img:
-                    image_files.append(img.convert("RGB"))
-
-            raw_output = llava_answer(llava_tokenizer, llava_model, llava_image_processor, item, image_files, args)
-            pred_choice = extract_choice(raw_output)
-
-            qs_id = str(item["id"])
-            gt_choice = str(item["gt_choice"])
-            scenario = str(item["scenario"])
-            row = {
-                "qs_id": qs_id,
-                "prompt": item["prompt"],
-                "output": raw_output,
-                "gt_answer": item["answer"],
-                "shortuuid": uuid.uuid4().hex,
-                "model_id": f"llava_qwen7b_multidim_{dim_model_tag.split('/')[-1]}_{args.fusion_strategy}",
-                "gt_choice": gt_choice,
-                "scenario": scenario,
-                "aspect": item["aspect"],
-                "meta_pred_choice": pred_choice,
-                "meta_rag_count": len(fused),
-                "meta_rag_source": "multi_dimension_magiclens_pipeline",
-                "meta_n_dims": args.n_dims,
-                "meta_dim_instructions": dim_instructions,
-                "meta_fusion_strategy": args.fusion_strategy,
-                "meta_dim_generator_model": dim_model_tag,
-                "meta_dim_generator_type": args.dim_generator_type,
-                "meta_fused_retrieval": [
-                    {"rank": f["rank"], "path": f["path"], "fusion_score": f.get("fusion_score", f.get("fused_score"))}
-                    for f in fused
-                ],
-                "meta_per_dim_retrieval": [
-                    [{"rank": r["rank"], "path": r["path"], "score": r["score"]} for r in dim_res]
-                    for dim_res in per_dim
-                ],
-            }
-            out.write(json.dumps(row, ensure_ascii=False) + "\n")
-
-            if dims_out:
-                dims_out.write(
-                    json.dumps(
-                        {"qs_id": qs_id, "question": question_text, "instructions": dim_instructions, "dim_gen_time": round(t_dim, 3)},
-                        ensure_ascii=False,
-                    )
-                    + "\n"
-                )
-
-            processed += 1
-            is_correct = pred_choice == gt_choice
-            if is_correct:
-                correct += 1
-            stat = by_scenario.setdefault(scenario, {"total": 0, "correct": 0})
-            stat["total"] += 1
-            if is_correct:
-                stat["correct"] += 1
+                processed += 1
+                if is_correct:
+                    correct += 1
+                stat = by_scenario.setdefault(scenario, {"total": 0, "correct": 0})
+                stat["total"] += 1
+                if is_correct:
+                    stat["correct"] += 1
+    finally:
+        if trace_out:
+            trace_out.close()
 
     if dims_out:
         dims_out.close()
 
-    by_scenario_acc = {sc: round(100.0 * st["correct"] / max(1, st["total"]), 2) for sc, st in by_scenario.items()}
+    by_scenario_acc = (
+        {sc: round(100.0 * st["correct"] / max(1, st["total"]), 2) for sc, st in by_scenario.items()}
+        if args.final_answerer == "llava"
+        else {}
+    )
     summary = {
         "dataset_name": args.dataset_name,
         "processed": processed,
         "correct": correct,
-        "accuracy": round(100.0 * correct / max(1, processed), 2),
+        "accuracy": round(100.0 * correct / max(1, processed), 2) if args.final_answerer == "llava" else None,
         "n_dims": args.n_dims,
         "dim_top_k": args.dim_top_k,
         "final_top_k": args.final_top_k,
         "fusion_strategy": args.fusion_strategy,
         "dim_generator_type": args.dim_generator_type,
         "dim_generator_model": dim_model_tag,
+        "final_answerer": args.final_answerer,
+        "magiclens_jax_platform": args.magiclens_platform,
         "dim_gen_failures": dim_gen_failures,
         "avg_dim_gen_time_sec": round(sum(dim_gen_times) / max(1, len(dim_gen_times)), 3),
         "avg_retrieval_time_sec": round(sum(retrieval_times) / max(1, len(retrieval_times)), 3),
@@ -427,7 +1028,10 @@ def run_benchmark(args: argparse.Namespace) -> None:
     with open(summary_path, "w", encoding="utf-8") as f:
         json.dump(summary, f, ensure_ascii=False, indent=2)
     log(f"summary_saved={summary_path}")
-    log(f"accuracy={summary['accuracy']}% processed={processed} dim_gen_failures={dim_gen_failures}")
+    if args.final_answerer == "llava":
+        log(f"accuracy={summary['accuracy']}% processed={processed} dim_gen_failures={dim_gen_failures}")
+    else:
+        log(f"retrieval_only processed={processed} dim_gen_failures={dim_gen_failures}")
 
 
 def main() -> None:

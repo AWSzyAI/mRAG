@@ -146,7 +146,7 @@ MagicLens 与 CLIP 的差异在于，其 query 侧并不只依赖 query image，
 
 给定第 $j$ 条指令文本 $t_j$ 与查询图像 $x_q$，MagicLens 以 $(x_q,t_j)$ 编码查询侧表征，在外部语料库向量上计算相似度并得到各自的 Top-$K_{\mathrm{dim}}$ 列表。多路列表并不直接拼接，而是先送入融合模块：实现上提供倒数排名和（RRF）、分数求和与投票式策略等可选算子，将多份排序信号合并为长度 $K_{\mathrm{final}}$ 的候选序列，以抑制单路排序中的偶然尖峰并在不同语义维度之间做折中。融合得到的图像路径与查询图像一起，按与 corpus 线实验相同的提示模板与选项抽取流程输入 LLaVA-OneVision，使该流水线在“固定下游模型、更动检索与查询构造”的意义上可与既有 E0--E7 结果对照。
 
-与上述 Gemma~4 分支并列，维度文本亦可通过仅消费题干的接口大模型或本地纯文本生成模型获得；二者不读取查询图像，部署成本较低，但无法利用画面中的细粒度线索拆分检索需求。三类后端在同一脚本入口中以参数切换，便于在控制硬件条件的前提下比较“文本规划”和“图文协同规划”对 MagicLens 召回行为的影响。当前稿件的主结果表仍以单指令或单路检索配置为主，多维融合链路作为已实现的系统扩展写入方法章节，其定量评测将在后续实验中补齐。
+与上述 Gemma~4 分支并列，维度文本亦可通过仅消费题干的接口大模型或本地纯文本生成模型获得；二者不读取查询图像，部署成本较低，但无法利用画面中的细粒度线索拆分检索需求。三类后端在同一脚本入口中以参数切换，便于在控制硬件条件的前提下比较“文本规划”和“图文协同规划”对 MagicLens 召回行为的影响。与上述“多维指令—分路召回—结果融合”对应的\textbf{端到端可复现管线}（E8 实验，见第~\ref{sec:e8_pipeline}~节）已在统一脚本中实现，支持在完整语料上输出逐样本 trace、分场景统计与可解释可视化资产。
 
 \subsubsection{生成器的选择：LLaVA vs Gemma 4}
 
@@ -275,6 +275,127 @@ Retrieved effective & 102 (7.54\%) & 1251 (92.46\%) & 4.70 \\
 
 这一点也解释了为何在 MRAG-Bench 官方 \texttt{llava\_one\_vision.py} 中检索 \texttt{clip} 并不能直接得到全库检索实现：官方脚本负责在既定输入图像与既定证据图像条件下调用 LLaVA 作答，并不承担从完整图像库中召回候选的职责。CLIP 是本文为 E3、E6 等 corpus 线实验单独接入的粗召回器，用于考察在脱离数据集 \texttt{retrieved\_images} 的前提下，从自建语料库中直接检索五张证据图像时的系统行为。
 
+\section{面向多维查询与融合式终答的实验管线（E8）}
+\label{sec:e8_pipeline}
+
+在 E0--E7 的检索对比基础上，本文进一步将研究对象从“单路检索 + 单模型作答”推进到\textbf{查询侧可扩展}的多维检索与融合式多模态终答。该实验在本文中记为 E8，目标是在不改动 MagicLens 参数的前提下，通过\textbf{多指令规划、多路 Top-$K$ 结果融合、可选证据文本增强与固定 VLM}形成一条可复现的端到端管线，为后续全库尺度定量分析提供统一接口。
+
+\subsection{流水线与可复现资产}
+
+E8 的一条样本在系统内依次经历以下阶段（与实现脚本 \texttt{test/pipeline\_multi\_dim\_rag.py} 一致）：
+\begin{enumerate}[leftmargin=2em]
+\item \textbf{维度规划}：Gemma~4~E2B-it 读取查询图像与题干，生成 $N$ 条短英文指令；可选输出每条维度的 \texttt{rationale} 作为可审计的生成理由，不直接拼入检索 query。
+\item \textbf{分路检索}：对每条指令，MagicLens 在查询图像与指令条件下对外部语料各返回 Top-$K_{\mathrm{dim}}$。
+\item \textbf{多列表融合}：对 $N$ 路排序做倒数排名和（RRF；本文默认 $K_{\mathrm{rrf}}=60$）或等价的列表融合，得到最终 Top-$K_{\mathrm{final}}$。
+\item \textbf{（可选）证据描述}：Gemma~4 对“查询图 + 融合后证据图”生成简短自然语言描述，仅作为对 LLaVA 的辅助文本，不改变图像序列本身（本文实验默认开启该步骤以便论文展示过程性信息）。
+\item \textbf{多模态终答}：在固定多选项模板下，将查询图与选定的融合证据图按约定顺序输入 LLaVA-OneVision 输出选项字母；下游抽取器自输出中解析 A/B/C/D。
+\end{enumerate}
+
+上述流程产生的可复现资产包括：逐样本答案行（\texttt{jsonl}）、融合前后检索路径、维度层 trace、以及配套可视化图（分维 Top-1 拼图、分维 Top-$K$ 网格、查询图$+$融合 Top-5 拼图等），便于在论文中开展\textbf{可解释}分析（例如不同维度间重复命中、融合分数贡献与错误样本对照）。
+
+\subsection{与既有实验相比的创新点（总结）}
+
+E8 在“查询链 + 全库多模态 RAG”意义上的创新点可概括为：
+\begin{itemize}[leftmargin=1.8em]
+\item \textbf{多视角指令规划}：在查询图像与题干共同约束下生成互补检索子任务，从机制上避免“单条指令过度贴近某一外观模式”导致的排序偏置。
+\item \textbf{多路可融合排序}：在 MagicLens 返回的多份候选列表上引入显式融合算子，使不同语义维度的证据能够在排序层面被折中整合。
+\item \textbf{推理期扩展、无需更新检索器参数}：维数、每维 Top-$K$、融合策略与终答用图数均可在配置层调整，与本文强调的 inference-time 方法路线一致。
+\item \textbf{固定 VLM 下的端到端可对照}：在固定 LLaVA 与提示模板的框架内，将改进集中在检索前端的查询与融合设计，使对比结论可解释、可复现。
+\end{itemize}
+
+\subsection{示例走查：MRAG-Bench 样本 \texttt{qs\_id=0}}
+\label{sec:e8_example_qs0}
+
+为便于读者理解 E8 的“过程性信息”，表~\ref{tab:e8_qs0_dims} 给出样本 \texttt{qs\_id=0} 的五条检索子任务与对应 \texttt{rationale}（为版面简洁仅保留英文原句，与系统日志一致）。
+
+\begin{table}[htbp]
+\centering
+\scriptsize
+\caption{E8 样例 \texttt{qs\_id=0}：多维度查询指令与生成理由。}
+\label{tab:e8_qs0_dims}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{clp{9.5cm}}
+\toprule
+\textbf{维} & \textbf{query（用于 MagicLens 检索，与 rationale 解耦）} & \textbf{rationale（可审计的简短理由）} \\
+\midrule
+1 & \texttt{dog sitting on cobblestone path in front of a building} & This focuses on identifying the main subject, the dog, in its environment. \\
+2 & \texttt{black and tan dog breed identification} & This aims to get breed-specific information about the dog's appearance. \\
+3 & \texttt{terrier dog breeds comparison} & This helps narrow down the options by focusing on the category of dogs presented. \\
+4 & \texttt{outdoor scene with ivy and stone pathway} & This captures the background context, which might offer clues about the location or style. \\
+5 & \texttt{close-up of a small black dog} & A close-up might reveal finer details of the dog's coat and features. \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+多路结果经 RRF 融合后，得到长度 $K_{\mathrm{final}}=5$ 的候选集；其倒数排名和形式为
+\begin{equation}
+\mathrm{RRF}(d)=\sum_{j=1}^{N}\frac{1}{K_{\mathrm{rrf}}+\mathrm{rank}_j(d)},
+\end{equation}
+其中 $\mathrm{rank}_j(d)$ 为第 $j$ 条指令对应列表中候选项 $d$ 的名次，若 $d$ 未出现则不计入。
+
+图~\ref{fig:e8_qs0_viz} 将同一走查在可视化层展开为三类过程图：\textbf{(a)}~各维度 Top-1 的横向拼贴；\textbf{(b)}~“维度 $\times$ 名次”的网格总览，用于观察跨维重复命中与排序；\textbf{(c)}~查询图与融合后 Top-5 证据的拼图，使读者直接看到“最终喂给多模态终答的图像条件”与检索阶段的对应关系。图像文件为论文工作区自带示例，路径为 \texttt{paper/images/e8\_qs0\_*.png}，由 \texttt{log/E8/figures/} 下同名资产复制而来。
+
+\begin{figure}[htbp]
+\centering
+\begin{subfigure}{\linewidth}
+    \centering
+    \includegraphics[width=0.98\linewidth]{e8_qs0_dim_top1_1x5.png}
+    \caption{分维 Top-1 拼图。}
+\end{subfigure}\\[0.6em]
+\begin{subfigure}{\linewidth}
+    \centering
+    \includegraphics[width=0.98\linewidth]{e8_qs0_dim_topk_grid.png}
+    \caption{分维 Top-$K$ 网格总览。}
+\end{subfigure}\\[0.6em]
+\begin{subfigure}{\linewidth}
+    \centering
+    \includegraphics[width=0.98\linewidth]{e8_qs0_query_plus_final_top5_1x6.png}
+    \caption{查询图与融合后最终 Top-5 证据拼图。}
+\end{subfigure}
+\caption{E8 样例 \texttt{qs\_id=0} 的过程性图像：维度层检索与融合层终选对照。}
+\label{fig:e8_qs0_viz}
+\end{figure}
+
+在终答阶段，系统向 LLaVA 提供的文本为固定模板下的多选项问题，并可选附加以 Gemma~4 生成的“证据图描述”作为辅助。下面给出生成日志中的 \texttt{prompt\_question\_part} 片段（英文原文；描述文本略去部分换行以节省版面，完整版见同一样本的 trace 资产）：
+
+\begin{verbatim}
+Additional visual evidence descriptions generated by Gemma4. Use them
+as auxiliary evidence together with the images; answer with only
+the option letter.
+query_image (0.png): A small, black and tan dog is lying down ...
+... (retrieved_rank_1..5 descriptions) ...
+Can you identify this animal?
+ Choices:
+A: silky_terrier
+B: Yorkshire_terrier
+C: Australian_terrier
+D: Cairn_terrier
+\end{verbatim}
+
+在该走查的\textbf{5 样本子集}对照实验中，\texttt{qs\_id=0} 的模型预测为 B（\texttt{Yorkshire\_terrier}），标准选择为 A（\texttt{silky\_terrier}），用于展示“多路证据并不必然带来正确多选”的现象；全量结果统计见下一小节。图~\ref{fig:e8_qs0_viz} 可在事后对照：若融合证据集合呈现强犬种歧义，则更依赖后续融合策略、证据筛选或更贴近细粒度区分的子任务，而非单纯增加候选数量。
+
+\subsection{全数据集运行的结果表位（预留给终稿补数）}
+\label{sec:e8_full_results_placeholder}
+
+E8 支持在 \texttt{uclanlp/MRAG-Bench} 全 1353 条样本上运行；本文在定稿时将在表~\ref{tab:e8_full_main_metrics} 汇总总体准确率、分场景准确率、平均耗时与 \texttt{meta\_llava\_error} 失败率，并配套给出与 E3/E7 等基线在相同下游 VLM 与提示模板下的对照分析。当前正文保留表位，便于在完整实验结束后一次性填入。
+
+\begin{table}[htbp]
+\centering
+\scriptsize
+\caption{E8 全量 MRAG-Bench 运行：主指标占位表（定稿时补全）。}
+\label{tab:e8_full_main_metrics}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lcccc}
+\toprule
+\textbf{设置} & \textbf{整体准确率} & \textbf{分场景表} & \textbf{平均每样本时间} & \textbf{终答失败率} \\
+\midrule
+E8（本文管线） & （待补） & （待补：九类场景/按 MRAG-Bench 定义） & （待补：秒/样本） & （待补：$N/A$ 等） \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
 
 \section{整体结果与控制实验}
 
@@ -348,8 +469,8 @@ E6 对应“CLIP 粗召回 + MagicLens 重排”的混合方案，其整体准�
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.76\linewidth]{corpus_scenario_radar.png}
-\caption{场景能力地图雷达图。该图从整体轮廓上展示了 E3、E6 与 E7 在九类场景上的能力边界：CLIP 路线整体更均衡，MagicLens 直检索在 \textit{Incomplete} 与 \textit{Temporal} 上呈现局部凸起，而混合重排方案当前尚未显著改变 CLIP 的主轮廓。}
+\includegraphics[width=\linewidth]{corpus_scenario_radar.png}
+\caption{场景能力地图雷达图。左图采用 0--100 的统一幅度，保证 E0--E7 在九类场景上的结果均处于完整坐标范围内；右图将外圈幅度设为所有实验、所有场景中的最大值，用于放大不同实验曲线之间的局部差异。}
 \label{fig:corpus_scenario_radar}
 \end{figure}
 
