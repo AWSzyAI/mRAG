@@ -5,12 +5,13 @@ Multi-dimension RAG pipeline (MRAG-Bench + Gemma4/query planner + MagicLens, opt
 Module layout (all reusable logic lives under ``src/mrag/``):
 
 1. ``src.mrag.query_planner`` — build chat prompts and call an LLM (API or local HF)
-   to produce N complementary English retrieval instructions.
+   to produce N complementary English retrieval instructions. The ``raw_question``
+   mode skips rewriting and sends the original question+choices to retrieval.
 2. ``src.mrag.magiclens`` — encode query image + each instruction; score corpus.
 3. ``src.mrag.multi_dim_pipeline`` — run retrieval per instruction, then fuse lists.
 4. ``src.mrag.fusion`` — RRF / score-sum / voting (used by multi_dim_pipeline).
 5. ``src.mrag.indexing`` — load or build cached MagicLens corpus embeddings.
-6. Optional LLaVA answer stage for end-to-end A/B/C/D evaluation.
+6. Optional LLaVA or Gemma4 answer stage for end-to-end A/B/C/D evaluation.
 
 Environment (copy ``example.env`` to ``.env`` at repo root; do not commit secrets):
 
@@ -368,8 +369,12 @@ def build_arg_parser() -> argparse.ArgumentParser:
         "--dim-generator-type",
         type=str,
         default=os.environ.get("DIM_GENERATOR_TYPE", "api"),
-        choices=["api", "local", "gemma4_local"],
-        help="api=OpenAI-compatible HTTP; local=HF text-generation pipeline; gemma4_local=Gemma4 multimodal (query image + question).",
+        choices=["api", "local", "gemma4_local", "raw_question"],
+        help=(
+            "api=OpenAI-compatible HTTP; local=HF text-generation pipeline; "
+            "gemma4_local=Gemma4 multimodal (query image + question); "
+            "raw_question=no rewrite, use original question+choices as the single retrieval instruction."
+        ),
     )
     p.add_argument(
         "--dim-generator-model",
@@ -448,8 +453,8 @@ def build_arg_parser() -> argparse.ArgumentParser:
         "--final-answerer",
         type=str,
         default=os.environ.get("FINAL_ANSWERER", "none"),
-        choices=["none", "llava"],
-        help="none writes Gemma4 dimensions + MagicLens candidates only; llava loads LLaVA for A/B/C/D evaluation.",
+        choices=["none", "llava", "gemma4"],
+        help="none writes Gemma4 dimensions + MagicLens candidates only; llava/gemma4 run A/B/C/D evaluation.",
     )
     p.add_argument("--llava-model-path", type=str, default=str(ROOT_DIR / "models/llava-onevision-qwen2-7b-ov"))
     p.add_argument("--llava-device-map", type=str, default="auto")
@@ -465,6 +470,18 @@ def build_arg_parser() -> argparse.ArgumentParser:
         default=1,
         help="Maximum number of images passed to LLaVA per sample (including query image). "
         "Use 1 for stability if multi-image inference triggers CUDA device-side asserts.",
+    )
+    p.add_argument(
+        "--gemma4-answer-max-new-tokens",
+        type=int,
+        default=int((os.environ.get("GEMMA4_ANSWER_MAX_NEW_TOKENS") or "64").strip() or "64"),
+        help="Max new tokens for Gemma4 final answerer. Keep small because only A/B/C/D is expected.",
+    )
+    p.add_argument(
+        "--gemma4-answer-max-images",
+        type=int,
+        default=int((os.environ.get("GEMMA4_ANSWER_MAX_IMAGES") or "6").strip() or "6"),
+        help="Maximum images passed to Gemma4 final answerer, including query image.",
     )
 
     p.add_argument("--answers-file", type=str, default=str(ROOT_DIR / "log/E8/e8_multi_dim_rag_results.jsonl"))
@@ -522,7 +539,12 @@ def run_benchmark(args: argparse.Namespace) -> None:
     query_image_cache_dir = _resolve_repo_path(args.query_image_cache_dir, ROOT_DIR)
 
     api_key = (args.dim_generator_api_key or os.environ.get("DIM_GENERATOR_API_KEY", "")).strip()
-    dim_model_tag = args.gemma4_model_id if args.dim_generator_type == "gemma4_local" else args.dim_generator_model
+    if args.dim_generator_type == "gemma4_local":
+        dim_model_tag = args.gemma4_model_id
+    elif args.dim_generator_type == "raw_question":
+        dim_model_tag = "raw_question_no_rewrite"
+    else:
+        dim_model_tag = args.dim_generator_model
 
     log_torch_cuda_env()
     log(
@@ -562,7 +584,7 @@ def run_benchmark(args: argparse.Namespace) -> None:
         llava_tokenizer, llava_model, llava_image_processor = load_llava(args)
         log("LLaVA model ready")
     else:
-        log("final_answerer=none; skipping LLaVA/model answer stage")
+        log(f"final_answerer={args.final_answerer}; skipping LLaVA model load")
 
     local_pipeline = None
     gemma_processor = None
@@ -574,7 +596,12 @@ def run_benchmark(args: argparse.Namespace) -> None:
         )
         log(f"local_dim_generator_ready={args.dim_generator_model}")
 
-    if args.dim_generator_type == "gemma4_local":
+    needs_gemma4 = (
+        args.dim_generator_type == "gemma4_local"
+        or args.describe_final_images
+        or args.final_answerer == "gemma4"
+    )
+    if needs_gemma4:
         gdir = _resolve_repo_path(args.gemma4_local_dir, ROOT_DIR)
         token = (args.gemma4_hf_token or os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN") or "").strip() or None
         dev = args.gemma4_device.strip()
@@ -593,7 +620,7 @@ def run_benchmark(args: argparse.Namespace) -> None:
             allow_torch_below_2_4=bool(args.gemma4_allow_torch_below_2_4),
         )
         gemma_model.eval()
-        log(f"gemma4_dim_generator_ready model_id={args.gemma4_model_id} local_dir={gdir} device={dev}")
+        log(f"gemma4_model_ready model_id={args.gemma4_model_id} local_dir={gdir} device={dev}")
 
     data_args = argparse.Namespace(
         dataset_name=args.dataset_name,
@@ -614,6 +641,7 @@ def run_benchmark(args: argparse.Namespace) -> None:
     by_scenario: dict[str, dict] = {}
     dim_gen_times: list[float] = []
     retrieval_times: list[float] = []
+    final_answer_times: list[float] = []
     dim_gen_failures = 0
 
     seen_qs_ids: set[str] = set()
@@ -669,7 +697,9 @@ def run_benchmark(args: argparse.Namespace) -> None:
                 dim_rationales: list[str] = []
                 dim_generation_raw_text = ""
                 try:
-                    if args.dim_generator_type == "api":
+                    if args.dim_generator_type == "raw_question":
+                        dim_instructions = [question_with_choices]
+                    elif args.dim_generator_type == "api":
                         dim_instructions = qp.generate_retrieval_instructions(
                             question_with_choices,
                             args.n_dims,
@@ -783,12 +813,13 @@ def run_benchmark(args: argparse.Namespace) -> None:
                         )
                     t_desc = time.time() - t0
 
-                llava_prompt_question_part = question_with_choices
+                final_prompt_question_part = question_with_choices
                 if descriptions:
-                    llava_prompt_question_part = _augment_question_with_image_descriptions(question_with_choices, descriptions)
+                    final_prompt_question_part = _augment_question_with_image_descriptions(question_with_choices, descriptions)
 
-                t_llava = 0.0
-                llava_error = None
+                t_final_answer = 0.0
+                final_answer_error = None
+                final_answer_image_files = [query_image]
                 if args.final_answerer == "llava":
                     image_files = [query_image]
                     for fi in fused:
@@ -798,8 +829,8 @@ def run_benchmark(args: argparse.Namespace) -> None:
                     if len(image_files) > max_images:
                         image_files = image_files[:max_images]
                     llava_item = dict(item)
-                    llava_item["prompt_question_part"] = llava_prompt_question_part
-                    llava_item["question"] = llava_prompt_question_part
+                    llava_item["prompt_question_part"] = final_prompt_question_part
+                    llava_item["question"] = final_prompt_question_part
                     t0 = time.time()
                     try:
                         raw_output = llava_answer(
@@ -814,19 +845,44 @@ def run_benchmark(args: argparse.Namespace) -> None:
                     except Exception as e:
                         raw_output = ""
                         pred_choice = "N/A"
-                        llava_error = str(e)
+                        final_answer_error = str(e)
                         log(f"llava_answer_error qs_id={item.get('id')}: {e}")
-                    t_llava = time.time() - t0
+                    t_final_answer = time.time() - t0
+                    final_answer_image_files = image_files
+                elif args.final_answerer == "gemma4":
+                    image_paths = [str(query_image_path)] + [str(fi["path"]) for fi in fused]
+                    max_images = max(1, int(args.gemma4_answer_max_images))
+                    if len(image_paths) > max_images:
+                        image_paths = image_paths[:max_images]
+                    t0 = time.time()
+                    try:
+                        raw_output = core_gemma4_dims.answer_question_with_evidence_gemma4(
+                            gemma_processor,
+                            gemma_model,
+                            image_paths=image_paths,
+                            question=final_prompt_question_part,
+                            max_new_tokens=args.gemma4_answer_max_new_tokens,
+                        )
+                        pred_choice = extract_choice(raw_output)
+                    except Exception as e:
+                        raw_output = ""
+                        pred_choice = "N/A"
+                        final_answer_error = str(e)
+                        log(f"gemma4_answer_error qs_id={item.get('id')}: {e}")
+                    t_final_answer = time.time() - t0
+                    final_answer_image_files = image_paths
                 else:
                     image_files = [query_image]
                     raw_output = ""
                     pred_choice = "N/A"
+                    final_answer_image_files = image_files
 
                 qs_id = str(item["id"])
                 gt_choice = str(item["gt_choice"])
                 scenario = str(item["scenario"])
-                is_correct = args.final_answerer == "llava" and pred_choice == gt_choice
+                is_correct = args.final_answerer in ("llava", "gemma4") and pred_choice == gt_choice
                 sample_total = time.time() - sample_t0
+                final_answer_times.append(t_final_answer)
                 row = {
                     "qs_id": qs_id,
                     "prompt": item["prompt"],
@@ -860,11 +916,13 @@ def run_benchmark(args: argparse.Namespace) -> None:
                         "dim_generation": round(t_dim, 3),
                         "magiclens_retrieval_and_fusion": round(t_ret, 3),
                         "gemma4_image_descriptions": round(t_desc, 3),
-                        "llava_answer": round(t_llava, 3),
+                        "final_answer": round(t_final_answer, 3),
                         "sample_total": round(sample_total, 3),
                     },
-                    "meta_llava_error": llava_error,
-                    "meta_llava_image_count": len(image_files),
+                    "meta_final_answer_error": final_answer_error,
+                    "meta_final_answer_image_count": len(final_answer_image_files),
+                    "meta_llava_error": final_answer_error if args.final_answerer == "llava" else None,
+                    "meta_llava_image_count": len(final_answer_image_files) if args.final_answerer == "llava" else 0,
                 }
                 out.write(json.dumps(row, ensure_ascii=False) + "\n")
 
@@ -897,6 +955,7 @@ def run_benchmark(args: argparse.Namespace) -> None:
                             "magiclens_platform": args.magiclens_platform,
                             "final_answerer": args.final_answerer,
                             "llava_model_path": str(_resolve_repo_path(args.llava_model_path, ROOT_DIR)),
+                            "gemma4_answer_model": args.gemma4_model_id if args.final_answerer == "gemma4" else None,
                         },
                         "input": {
                             "query_image": _path_payload(str(query_image_path)),
@@ -950,6 +1009,24 @@ def run_benchmark(args: argparse.Namespace) -> None:
                             "items": descriptions,
                             "time_sec": round(t_desc, 3),
                         },
+                        "final_answer": {
+                            "answerer": args.final_answerer,
+                            "enabled": args.final_answerer in ("llava", "gemma4"),
+                            "image_sequence": [
+                                {"slot": 0, "image_label": "query_image", **_path_payload(str(query_image_path))}
+                            ]
+                            + [
+                                {"slot": rank, "image_label": f"retrieved_rank_{rank}", **_path_payload(str(f["path"]))}
+                                for rank, f in enumerate(fused, start=1)
+                            ],
+                            "prompt_question_part": final_prompt_question_part,
+                            "raw_output": raw_output,
+                            "pred_choice": pred_choice,
+                            "gt_choice": gt_choice,
+                            "is_correct": is_correct,
+                            "error": final_answer_error,
+                            "time_sec": round(t_final_answer, 3),
+                        },
                         "llava_answer": {
                             "enabled": args.final_answerer == "llava",
                             "image_sequence": [
@@ -959,12 +1036,12 @@ def run_benchmark(args: argparse.Namespace) -> None:
                                 {"slot": rank, "image_label": f"retrieved_rank_{rank}", **_path_payload(str(f["path"]))}
                                 for rank, f in enumerate(fused, start=1)
                             ],
-                            "prompt_question_part": llava_prompt_question_part,
+                            "prompt_question_part": final_prompt_question_part,
                             "raw_output": raw_output,
                             "pred_choice": pred_choice,
                             "gt_choice": gt_choice,
                             "is_correct": is_correct,
-                            "time_sec": round(t_llava, 3),
+                            "time_sec": round(t_final_answer, 3) if args.final_answerer == "llava" else 0.0,
                         },
                         "timings_sec": row["meta_timings_sec"],
                     }
@@ -1004,14 +1081,14 @@ def run_benchmark(args: argparse.Namespace) -> None:
 
     by_scenario_acc = (
         {sc: round(100.0 * st["correct"] / max(1, st["total"]), 2) for sc, st in by_scenario.items()}
-        if args.final_answerer == "llava"
+        if args.final_answerer in ("llava", "gemma4")
         else {}
     )
     summary = {
         "dataset_name": args.dataset_name,
         "processed": processed,
         "correct": correct,
-        "accuracy": round(100.0 * correct / max(1, processed), 2) if args.final_answerer == "llava" else None,
+        "accuracy": round(100.0 * correct / max(1, processed), 2) if args.final_answerer in ("llava", "gemma4") else None,
         "n_dims": args.n_dims,
         "dim_top_k": args.dim_top_k,
         "final_top_k": args.final_top_k,
@@ -1023,12 +1100,13 @@ def run_benchmark(args: argparse.Namespace) -> None:
         "dim_gen_failures": dim_gen_failures,
         "avg_dim_gen_time_sec": round(sum(dim_gen_times) / max(1, len(dim_gen_times)), 3),
         "avg_retrieval_time_sec": round(sum(retrieval_times) / max(1, len(retrieval_times)), 3),
+        "avg_final_answer_time_sec": round(sum(final_answer_times) / max(1, len(final_answer_times)), 3),
         "by_scenario_accuracy": by_scenario_acc,
     }
     with open(summary_path, "w", encoding="utf-8") as f:
         json.dump(summary, f, ensure_ascii=False, indent=2)
     log(f"summary_saved={summary_path}")
-    if args.final_answerer == "llava":
+    if args.final_answerer in ("llava", "gemma4"):
         log(f"accuracy={summary['accuracy']}% processed={processed} dim_gen_failures={dim_gen_failures}")
     else:
         log(f"retrieval_only processed={processed} dim_gen_failures={dim_gen_failures}")

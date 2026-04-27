@@ -1,0 +1,177 @@
+[
+  {
+    "experiment": "E0",
+    "status": "ok",
+    "processed": 1353,
+    "recall_at_5": 1.0,
+    "recall_at_n": 1.0,
+    "gt_hits_at_5": 4.686622320768662,
+    "gt_hits_at_n": 4.698447893569845,
+    "candidate_count": 4.698447893569845
+  },
+  {
+    "experiment": "E1",
+    "status": "ok",
+    "processed": 1353,
+    "recall_at_5": 1.0,
+    "recall_at_n": 1.0,
+    "gt_hits_at_5": 4.686622320768662,
+    "gt_hits_at_n": 4.698447893569845,
+    "candidate_count": 4.698447893569845
+  },
+  {
+    "experiment": "E2",
+    "status": "ok",
+    "processed": 1353,
+    "recall_at_5": 0.22409460458240832,
+    "recall_at_n": 0.22409460458240832,
+    "gt_hits_at_5": 1.1108647450110865,
+    "gt_hits_at_n": 1.1130820399113082,
+    "candidate_count": 4.698447893569845
+  },
+  {
+    "experiment": "E3",
+    "status": "ok",
+    "processed": 1353,
+    "recall_at_5": 0.05846267553584652,
+    "recall_at_n": 0.05846267553584652,
+    "gt_hits_at_5": 0.28898743532889876,
+    "gt_hits_at_n": 0.28898743532889876,
+    "candidate_count": 5.0
+  },
+  {
+    "experiment": "E4",
+    "status": "not_applicable",
+    "processed": 0
+  },
+  {
+    "experiment": "E5",
+    "status": "ok",
+    "processed": 1353,
+    "recall_at_5": 1.0,
+    "recall_at_n": 1.0,
+    "gt_hits_at_5": 4.686622320768662,
+    "gt_hits_at_n": 4.698447893569845,
+    "candidate_count": 4.698447893569845
+  },
+  {
+    "experiment": "E6",
+    "status": "ok",
+    "processed": 1353,
+    "recall_at_5": 0.05801921655580217,
+    "recall_at_n": 0.05801921655580217,
+    "gt_hits_at_5": 0.286770140428677,
+    "gt_hits_at_n": 0.286770140428677,
+    "candidate_count": 5.0
+  },
+  {
+    "experiment": "E7",
+    "status": "ok",
+    "processed": 1353,
+    "recall_at_5": 0.02305986696230595,
+    "recall_at_n": 0.02305986696230595,
+    "gt_hits_at_5": 0.1123429416112343,
+    "gt_hits_at_n": 0.1123429416112343,
+    "candidate_count": 5.0
+  },
+  {
+    "experiment": "E8",
+    "status": "ok",
+    "processed": 1353,
+    "recall_at_5": 0.05421286031042145,
+    "recall_at_n": 0.1413155949741314,
+    "gt_hits_at_5": 0.270509977827051,
+    "gt_hits_at_n": 1.1825572801182558,
+    "candidate_count": 25.0
+  },
+  {
+    "experiment": "E9",
+    "status": "ok",
+    "processed": 1353,
+    "recall_at_5": 0.05421286031042145,
+    "recall_at_n": 0.1413155949741314,
+    "gt_hits_at_5": 0.270509977827051,
+    "gt_hits_at_n": 1.1825572801182558,
+    "candidate_count": 25.0
+  },
+  {
+    "experiment": "E10",
+    "status": "ok",
+    "processed": 1353,
+    "recall_at_5": 0.05000000000000016,
+    "recall_at_n": 0.05000000000000016,
+    "gt_hits_at_5": 0.24316334072431633,
+    "gt_hits_at_n": 0.24316334072431633,
+    "candidate_count": 5.0
+  },
+  {
+    "experiment": "E11_1",
+    "status": "missing",
+    "processed": 0
+  },
+  {
+    "experiment": "E11_2",
+    "status": "missing",
+    "processed": 0
+  },
+  {
+    "experiment": "E11_3",
+    "status": "missing",
+    "processed": 0
+  },
+  {
+    "experiment": "E11_4",
+    "status": "missing",
+    "processed": 0
+  },
+  {
+    "experiment": "E11_5/E8",
+    "status": "ok",
+    "processed": 1353,
+    "recall_at_5": 0.05421286031042145,
+    "recall_at_n": 0.1413155949741314,
+    "gt_hits_at_5": 0.270509977827051,
+    "gt_hits_at_n": 1.1825572801182558,
+    "candidate_count": 25.0
+  },
+  {
+    "experiment": "E12_1",
+    "status": "missing",
+    "processed": 0
+  },
+  {
+    "experiment": "E12_2",
+    "status": "missing",
+    "processed": 0
+  },
+  {
+    "experiment": "E12_3",
+    "status": "missing",
+    "processed": 0
+  },
+  {
+    "experiment": "E12_4",
+    "status": "missing",
+    "processed": 0
+  },
+  {
+    "experiment": "E12_5/E8",
+    "status": "ok",
+    "processed": 1353,
+    "recall_at_5": 0.05421286031042145,
+    "recall_at_n": 0.1413155949741314,
+    "gt_hits_at_5": 0.270509977827051,
+    "gt_hits_at_n": 1.1825572801182558,
+    "candidate_count": 25.0
+  },
+  {
+    "experiment": "E13_1",
+    "status": "missing",
+    "processed": 0
+  },
+  {
+    "experiment": "E13_2",
+    "status": "missing",
+    "processed": 0
+  }
+]

@@ -3,6 +3,6 @@
 #   make pull result        # preview
 #   make pull result y      # apply
 
-log/E8_final
-log/E8_full
+
+log/E9
 

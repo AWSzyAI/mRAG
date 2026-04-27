@@ -1,0 +1,10 @@
+experiment,overall,Scope,Obstruction,Temporal,Deformation,Biological,Angle,Partial,Incomplete,Others
+E0 GT-RAG baseline,59.05,66.67,67.59,57.72,56.86,55.88,59.63,64.23,29.41,64.17
+E1 GT+MagicLens rerank,60.16,66.67,69.44,58.39,57.84,55.88,61.49,65.45,30.39,65.0
+E2 retrieved+MagicLens rerank,51.74,59.8,59.26,48.99,55.88,50.0,51.24,50.41,33.33,59.17
+E3 CLIP corpus RAG,50.41,48.04,54.63,46.31,58.82,50.0,52.48,54.07,22.55,57.5
+E4 no RAG,53.14,55.88,57.41,47.65,55.88,50.98,56.21,56.1,33.33,55.83
+E5 GT no rerank,60.16,63.73,66.67,61.74,56.86,57.84,59.94,66.67,29.41,67.5
+E6 CLIP corpus + MagicLens rerank,50.33,55.88,51.85,46.31,56.86,49.02,54.04,49.19,27.45,56.67
+E7 MagicLens corpus RAG,47.97,45.1,48.15,46.98,50.0,50.98,51.55,47.56,32.35,51.67
+E8 Gemma4 multi-dim MagicLens RRF,56.32,59.8,57.41,54.36,54.9,56.86,57.45,54.07,29.41,80.0

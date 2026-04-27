@@ -6,12 +6,10 @@
     python paper/scripts/generate_analysis_figures.py
 
 这会重新生成 `paper/images/` 下的全部分析图，其中
-`corpus_scenario_radar.png` 默认画 E0--E7 的全部可比实验，并按雷达
+`corpus_scenario_radar.png` 默认画 E0--E10 的全部可比实验，并按雷达
 多边形面积从大到小排序。
 
-如果后续只想重画部分雷达图，可以改 `RADAR_RUNS`；如果新增 E8 全量
-结果，则在 `load_experiment_metrics()` 里补充 E8 的 summary 路径，
-并把 `"E8"` 加入 `RADAR_RUNS` 即可。
+如果后续只想重画部分雷达图，可以改 `RADAR_RUNS`。
 """
 import json
 import os
@@ -49,10 +47,8 @@ SCENARIO_LABELS = {
     "Obstruction": "Occlusion",
 }
 
-# 雷达图展示的实验集合。之前在 `make_corpus_scenario_radar()` 中写死为
-# ["E3", "E6", "E7"]，所以论文中的雷达图只展示了 corpus 检索线。
-# 现在默认展示 E0--E7；实际绘制顺序会按雷达多边形面积从大到小自动排序。
-RADAR_RUNS = ["E0", "E1", "E2", "E3", "E4", "E5", "E6", "E7"]
+# 雷达图展示的实验集合。实际绘制顺序会按雷达多边形面积从大到小自动排序。
+RADAR_RUNS = ["E0", "E1", "E2", "E3", "E4", "E5", "E6", "E7", "E8", "E9", "E10"]
 
 EXPERIMENT_NAMES = {
     "E0": "E0 GT-RAG",
@@ -63,6 +59,9 @@ EXPERIMENT_NAMES = {
     "E5": "E5 GT no-rerank",
     "E6": "E6 CLIP+ML Rerank",
     "E7": "E7 MagicLens-RAG",
+    "E8": "E8 MultiDim+RRF",
+    "E9": "E9 Gemma4 Answerer",
+    "E10": "E10 No query rewrite",
 }
 
 EXPERIMENT_COLORS = {
@@ -74,6 +73,9 @@ EXPERIMENT_COLORS = {
     "E5": "#9ecae9",
     "E6": "#e45756",
     "E7": "#54a24b",
+    "E8": "#b279a2",
+    "E9": "#6b6ecf",
+    "E10": "#17becf",
 }
 
 # 这两个旧 score 文件缺少 Obstruction/Occlusion 一列；论文总表中已有
@@ -214,21 +216,38 @@ def load_experiment_metrics():
         "overall": 47.97,
         "by_scenario": norm_scenario_dict(load_json(ROOT / "log" / "E7" / "e7_magiclens_corpus_rag_summary.json")["by_scenario_accuracy"]),
     }
+    data["E8"] = {
+        "overall": 56.32,
+        "by_scenario": norm_scenario_dict(load_json(ROOT / "log" / "E8_full" / "e8_full_summary.json")["by_scenario_accuracy"]),
+    }
+    data["E9"] = {
+        "overall": 38.95,
+        "by_scenario": norm_scenario_dict(load_json(ROOT / "log" / "E9" / "e9_gemma4_answer_summary.json")["by_scenario_accuracy"]),
+    }
+    e10_summary = load_json(ROOT / "log" / "E10" / "e10_no_rewrite_summary.json")
+    data["E10"] = {
+        "overall": float(e10_summary["accuracy"]),
+        "by_scenario": norm_scenario_dict(e10_summary["by_scenario_accuracy"]),
+    }
     return data
 
 
 def make_overall_accuracy_bar(exp):
-    order = ["E0", "E1", "E2", "E3", "E4", "E5", "E6", "E7"]
+    order = ["E0", "E1", "E2", "E3", "E4", "E5", "E6", "E7", "E8", "E9", "E10"]
     vals = [exp[k]["overall"] for k in order]
-    colors = ["#4c78a8", "#4c78a8", "#72b7b2", "#f58518", "#9d755d", "#4c78a8", "#e45756", "#54a24b"]
+    colors = [EXPERIMENT_COLORS[k] for k in order]
 
-    fig, ax = plt.subplots(figsize=(10.4, 4.8))
+    fig, ax = plt.subplots(figsize=(12.2, 4.8))
     bars = ax.bar(order, vals, color=colors)
-    ax.set_ylim(45, 62.5)
+    ax.set_ylim(35, 62.5)
     ax.set_ylabel("Overall Accuracy (%)")
-    ax.set_title("Overall Accuracy across E0-E7")
-    annotate_bars(ax, bars, fmt="{:.2f}", dy=0.15, fontsize=8)
+    ax.set_title("Overall Accuracy across E0-E10")
+    annotate_bars(ax, bars, fmt="{:.2f}", dy=0.15, fontsize=7.5)
     fig.tight_layout()
+    fig.savefig(IMG_DIR / "overall_accuracy_e0_e10.png", dpi=220)
+    # Backward-compatible filenames used by earlier thesis drafts.
+    fig.savefig(IMG_DIR / "overall_accuracy_e0_e9.png", dpi=220)
+    fig.savefig(IMG_DIR / "overall_accuracy_e0_e8.png", dpi=220)
     fig.savefig(IMG_DIR / "overall_accuracy_e0_e7.png", dpi=220)
     plt.close(fig)
 
@@ -263,7 +282,7 @@ def make_corpus_scenario_radar(exp):
 
     The output filename is kept as `corpus_scenario_radar.png` because
     `paper/content.tex` already references it. The content is now the full
-    E0--E7 scenario ability map rather than only E3/E6/E7. The figure uses
+    E0--E10 scenario ability map rather than only E3/E6/E7. The figure uses
     two side-by-side radar panels: a 0--100 global view and a tighter view
     whose outer radius equals the maximum value among all plotted runs.
     """
@@ -300,8 +319,11 @@ def make_corpus_scenario_radar(exp):
         },
     ]
 
+    # Draw E8 last with thicker line so the main architecture stands out in the stack.
+    draw_order = [r for r in order if r != "E8"] + (["E8"] if "E8" in order else [])
     handles = []
     labels_for_legend = []
+    first_panel_handles: dict = {}
     for spec in panel_specs:
         ax = spec["ax"]
         ax.set_theta_offset(np.pi / 2)
@@ -314,21 +336,26 @@ def make_corpus_scenario_radar(exp):
         ax.grid(alpha=0.35)
         ax.set_title(spec["title"], pad=22, fontsize=12)
 
-        for run in order:
+        for run in draw_order:
             vals = values_by_run[run] + values_by_run[run][:1]
+            lw = 3.15 if run == "E8" else 1.7
+            z = 3 if run == "E8" else 1
             line = ax.plot(
                 angles,
                 vals,
                 color=EXPERIMENT_COLORS[run],
-                linewidth=1.8,
+                linewidth=lw,
+                zorder=z,
                 label=EXPERIMENT_NAMES.get(run, run),
             )[0]
-            ax.fill(angles, vals, color=EXPERIMENT_COLORS[run], alpha=0.045)
+            ax.fill(angles, vals, color=EXPERIMENT_COLORS[run], alpha=0.045, zorder=z - 0.1)
             if ax is axes[0]:
-                handles.append(line)
-                labels_for_legend.append(EXPERIMENT_NAMES.get(run, run))
+                first_panel_handles[run] = line
+    for run in order:
+        handles.append(first_panel_handles[run])
+        labels_for_legend.append(EXPERIMENT_NAMES.get(run, run))
 
-    fig.suptitle("Scenario Ability Map: E0-E7 Experiments", y=0.98, fontsize=17)
+    fig.suptitle("Scenario Ability Map: E0-E10 Experiments", y=0.98, fontsize=17)
     fig.legend(
         handles,
         labels_for_legend,
@@ -336,9 +363,13 @@ def make_corpus_scenario_radar(exp):
         bbox_to_anchor=(0.5, -0.02),
         ncol=4,
         frameon=False,
-        fontsize=8.5,
+        fontsize=8,
     )
     fig.tight_layout(rect=(0, 0.08, 1, 0.94))
+    fig.savefig(IMG_DIR / "e0_e10_radar.png", dpi=240, bbox_inches="tight")
+    # Backward-compatible filenames used by earlier thesis drafts.
+    fig.savefig(IMG_DIR / "e0_e9_radar.png", dpi=240, bbox_inches="tight")
+    fig.savefig(IMG_DIR / "e0_e8_radar.png", dpi=240, bbox_inches="tight")
     fig.savefig(IMG_DIR / "corpus_scenario_radar.png", dpi=240, bbox_inches="tight")
     plt.close(fig)
 

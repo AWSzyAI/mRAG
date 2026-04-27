@@ -1,0 +1,141 @@
+{
+  "scenarios": [
+    "Scope",
+    "Obstruction",
+    "Temporal",
+    "Deformation",
+    "Biological",
+    "Angle",
+    "Partial",
+    "Incomplete",
+    "Others"
+  ],
+  "experiments": {
+    "E0 GT-RAG baseline": {
+      "overall": 59.05,
+      "by": {
+        "Scope": 66.67,
+        "Obstruction": 67.59,
+        "Temporal": 57.72,
+        "Deformation": 56.86,
+        "Biological": 55.88,
+        "Angle": 59.63,
+        "Partial": 64.23,
+        "Incomplete": 29.41,
+        "Others": 64.17
+      }
+    },
+    "E1 GT+MagicLens rerank": {
+      "overall": 60.16,
+      "by": {
+        "Scope": 66.67,
+        "Obstruction": 69.44,
+        "Temporal": 58.39,
+        "Deformation": 57.84,
+        "Biological": 55.88,
+        "Angle": 61.49,
+        "Partial": 65.45,
+        "Incomplete": 30.39,
+        "Others": 65.0
+      }
+    },
+    "E2 retrieved+MagicLens rerank": {
+      "overall": 51.74,
+      "by": {
+        "Scope": 59.8,
+        "Obstruction": 59.26,
+        "Temporal": 48.99,
+        "Deformation": 55.88,
+        "Biological": 50.0,
+        "Angle": 51.24,
+        "Partial": 50.41,
+        "Incomplete": 33.33,
+        "Others": 59.17
+      }
+    },
+    "E3 CLIP corpus RAG": {
+      "overall": 50.41,
+      "by": {
+        "Scope": 48.04,
+        "Obstruction": 54.63,
+        "Temporal": 46.31,
+        "Deformation": 58.82,
+        "Biological": 50.0,
+        "Angle": 52.48,
+        "Partial": 54.07,
+        "Incomplete": 22.55,
+        "Others": 57.5
+      }
+    },
+    "E4 no RAG": {
+      "overall": 53.14,
+      "by": {
+        "Scope": 55.88,
+        "Obstruction": 57.41,
+        "Temporal": 47.65,
+        "Deformation": 55.88,
+        "Biological": 50.98,
+        "Angle": 56.21,
+        "Partial": 56.1,
+        "Incomplete": 33.33,
+        "Others": 55.83
+      }
+    },
+    "E5 GT no rerank": {
+      "overall": 60.16,
+      "by": {
+        "Scope": 63.73,
+        "Obstruction": 66.67,
+        "Temporal": 61.74,
+        "Deformation": 56.86,
+        "Biological": 57.84,
+        "Angle": 59.94,
+        "Partial": 66.67,
+        "Incomplete": 29.41,
+        "Others": 67.5
+      }
+    },
+    "E6 CLIP corpus + MagicLens rerank": {
+      "overall": 50.33,
+      "by": {
+        "Scope": 55.88,
+        "Obstruction": 51.85,
+        "Temporal": 46.31,
+        "Deformation": 56.86,
+        "Biological": 49.02,
+        "Angle": 54.04,
+        "Partial": 49.19,
+        "Incomplete": 27.45,
+        "Others": 56.67
+      }
+    },
+    "E7 MagicLens corpus RAG": {
+      "overall": 47.97,
+      "by": {
+        "Scope": 45.1,
+        "Obstruction": 48.15,
+        "Temporal": 46.98,
+        "Deformation": 50.0,
+        "Biological": 50.98,
+        "Angle": 51.55,
+        "Partial": 47.56,
+        "Incomplete": 32.35,
+        "Others": 51.67
+      }
+    },
+    "E8 Gemma4 multi-dim MagicLens RRF": {
+      "overall": 56.32,
+      "by": {
+        "Scope": 59.8,
+        "Obstruction": 57.41,
+        "Temporal": 54.36,
+        "Deformation": 54.9,
+        "Biological": 56.86,
+        "Angle": 57.45,
+        "Partial": 54.07,
+        "Incomplete": 29.41,
+        "Others": 80.0
+      }
+    }
+  }
+}

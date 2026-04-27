@@ -1,4 +1,6 @@
 from pathlib import Path
+import re
+import warnings
 
 import jax
 import jax.numpy as jnp
@@ -7,6 +9,18 @@ from PIL import Image
 from tqdm.auto import tqdm
 
 from .clip_retriever import l2_normalize
+
+_TOKENIZER_CONTEXT_RE = re.compile(r"too long for context length", re.IGNORECASE)
+
+
+def _head_tail_words(words: list[str], keep: int) -> str:
+    if keep >= len(words):
+        return " ".join(words)
+    if keep <= 0:
+        return ""
+    head = (keep + 1) // 2
+    tail = keep - head
+    return " ".join(words[:head] + words[-tail:]) if tail else " ".join(words[:head])
 
 
 def preprocess_pil_image(image, size: int = 224) -> np.ndarray:
@@ -26,6 +40,65 @@ def build_magiclens_encoder(model, params, disable_jit: bool = False):
     return jax.jit(encode)
 
 
+def _safe_tokenize_clip_text(tokenizer_fn, text: str) -> np.ndarray:
+    """Tokenize CLIP text, truncating overlong prompts to a valid head/tail excerpt."""
+    try:
+        return np.array(tokenizer_fn(text))
+    except RuntimeError as exc:
+        if not _TOKENIZER_CONTEXT_RE.search(str(exc)):
+            raise
+
+    words = str(text).split()
+    if not words:
+        return np.array(tokenizer_fn(""))
+
+    lo, hi = 0, len(words)
+    best_tok = None
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        candidate = _head_tail_words(words, mid)
+        try:
+            tok = np.array(tokenizer_fn(candidate))
+        except RuntimeError as exc:
+            if not _TOKENIZER_CONTEXT_RE.search(str(exc)):
+                raise
+            hi = mid - 1
+            continue
+        best_tok = tok
+        lo = mid + 1
+
+    if best_tok is not None:
+        warnings.warn(
+            "MagicLens CLIP query exceeded tokenizer context; truncated to fit 77-token limit.",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+        return best_tok
+
+    # Rare path: a single whitespace token can still exceed the tokenizer limit.
+    chars = str(text)
+    lo, hi = 0, len(chars)
+    best_tok = np.array(tokenizer_fn(""))
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        candidate = chars[:mid]
+        try:
+            tok = np.array(tokenizer_fn(candidate))
+        except RuntimeError as exc:
+            if not _TOKENIZER_CONTEXT_RE.search(str(exc)):
+                raise
+            hi = mid - 1
+            continue
+        best_tok = tok
+        lo = mid + 1
+    warnings.warn(
+        "MagicLens CLIP query exceeded tokenizer context; truncated to fit 77-token limit.",
+        RuntimeWarning,
+        stacklevel=2,
+    )
+    return best_tok
+
+
 def rerank_rag_images(encode_fn, tokenizer_fn, question_text: str, image_files):
     if len(image_files) < 2:
         return image_files, []
@@ -38,7 +111,7 @@ def rerank_rag_images(encode_fn, tokenizer_fn, question_text: str, image_files):
     rag_embeds = np.asarray(encode_fn(jnp.array(rag_tok_batch), jnp.array(rag_img_batch)))
 
     q_img = preprocess_pil_image(query_image, 224)
-    q_tok = np.array(tokenizer_fn(question_text))
+    q_tok = _safe_tokenize_clip_text(tokenizer_fn, question_text)
     q_embed = np.asarray(encode_fn(jnp.array(q_tok), jnp.array(q_img)))[0]
 
     sims = np.matmul(rag_embeds, q_embed)
@@ -85,7 +158,7 @@ def retrieve_corpus_paths_ranked(
     Does not load candidate images into memory.
     """
     q_img = preprocess_pil_image(query_image, 224)
-    q_tok = np.array(tokenizer_fn(instruction))
+    q_tok = _safe_tokenize_clip_text(tokenizer_fn, instruction)
     q_embed = np.asarray(encode_fn(jnp.array(q_tok), jnp.array(q_img)))[0]
     q_embed = l2_normalize(q_embed[None, :])[0]
     sims = corpus_embeds @ q_embed
@@ -109,7 +182,7 @@ def retrieve_corpus_images_magiclens(
     top_k: int,
 ):
     q_img = preprocess_pil_image(query_image, 224)
-    q_tok = np.array(tokenizer_fn(question_text))
+    q_tok = _safe_tokenize_clip_text(tokenizer_fn, question_text)
     q_embed = np.asarray(encode_fn(jnp.array(q_tok), jnp.array(q_img)))[0]
     q_embed = l2_normalize(q_embed[None, :])[0]
     sims = corpus_embeds @ q_embed

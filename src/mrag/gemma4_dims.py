@@ -215,3 +215,60 @@ def describe_image_for_question_gemma4(
         except Exception:
             pass
     return " ".join(text.split())
+
+
+def answer_question_with_evidence_gemma4(
+    processor,
+    model,
+    *,
+    image_paths: list[str | Path],
+    question: str,
+    max_new_tokens: int = 64,
+    enable_thinking: bool = False,
+) -> str:
+    """Answer a multiple-choice visual question with query/evidence images.
+
+    The first image should be the query image; following images are retrieved evidence.
+    The model is asked to return only the option letter, but callers should still run
+    their normal robust choice extractor on the raw text.
+    """
+    content: list[dict] = []
+    for path in image_paths:
+        content.append({"type": "image", "image": str(Path(path).expanduser().resolve())})
+    content.append(
+        {
+            "type": "text",
+            "text": (
+                "You are answering a multiple-choice visual question.\n"
+                "The first image is the query image. The following images, if any, are retrieved visual evidence.\n"
+                "Use all provided visual evidence and the auxiliary descriptions in the question text if present.\n"
+                "Return ONLY the option letter (A, B, C, or D). No explanation.\n\n"
+                f"{question}"
+            ),
+        }
+    )
+    messages = [{"role": "user", "content": content}]
+    inputs = prepare_inputs(processor, model, messages, enable_thinking=enable_thinking)
+    input_len = int(inputs["input_ids"].shape[-1])
+    gen_cfg = GenerationConfig(max_new_tokens=max_new_tokens, do_sample=False, num_beams=1)
+    gen_log_utils = logging.getLogger("transformers.generation.utils")
+    gen_log_cfg = logging.getLogger("transformers.generation.configuration_utils")
+    prev_u, prev_c = gen_log_utils.level, gen_log_cfg.level
+    gen_log_utils.setLevel(logging.ERROR)
+    gen_log_cfg.setLevel(logging.ERROR)
+    try:
+        with torch.inference_mode():
+            out = model.generate(**inputs, generation_config=gen_cfg)
+    finally:
+        gen_log_utils.setLevel(prev_u)
+        gen_log_cfg.setLevel(prev_c)
+    new_ids = out[0, input_len:]
+    text = processor.tokenizer.decode(new_ids, skip_special_tokens=True).strip()
+    if hasattr(processor, "parse_response"):
+        try:
+            parsed = processor.parse_response(text)
+            if isinstance(parsed, dict) and parsed.get("content"):
+                text = str(parsed["content"]).strip()
+        except Exception:
+            pass
+    return " ".join(text.split())
