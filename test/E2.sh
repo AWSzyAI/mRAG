@@ -7,7 +7,8 @@ log() { echo "[$(timestamp)] [E2] $*"; }
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-1}"
+GPU_ID="${GPU_ID:-1}"
+export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-${GPU_ID}}"
 export LLAVA_DEVICE_MAP="${LLAVA_DEVICE_MAP:-single}"
 export LLAVA_ATTN_IMPLEMENTATION="${LLAVA_ATTN_IMPLEMENTATION:-sdpa}"
 export JAX_CUDA_REQUIRED="${JAX_CUDA_REQUIRED:-1}"

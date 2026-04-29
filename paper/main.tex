@@ -7,6 +7,7 @@
 \usepackage{booktabs}
 \usepackage{float}
 \usepackage{multirow}
+\usepackage{xurl}
 \usepackage[hidelinks]{hyperref}
 \usepackage{pdfpages}
 \usepackage{enumitem}
@@ -18,6 +19,7 @@
 
 \graphicspath{{images/}}
 \onehalfspacing
+\Urlmuskip=0mu plus 1mu
 \AtBeginDocument{\zihao{-4}}
 \setlength{\parindent}{2em}
 \setlength{\parskip}{0pt}
@@ -30,6 +32,15 @@
 \titleformat{\subsection}[block]{\bfseries\zihao{-4}}{\thesubsection}{0.75em}{}
 \titlespacing*{\subsection}{0pt}{0.5\baselineskip}{0.5\baselineskip}
 \titleformat{\subsubsection}[runin]{\bfseries\zihao{-4}}{\thesubsubsection}{0.75em}{}[。]
+\makeatletter
+\let\orig@l@chapter\l@chapter
+\renewcommand*\l@chapter[2]{%
+  \begingroup
+  \renewcommand*\numberline[1]{第##1章\hspace{0.8em}}%
+  \orig@l@chapter{#1}{#2}%
+  \endgroup
+}
+\makeatother
 \pagestyle{fancy}
 \fancyhf{}
 \fancyhead[C]{{\zihao{-5} 南京师范大学计算机与电子信息学院本科毕业论文}}
@@ -41,7 +52,7 @@
   \renewcommand{\headrulewidth}{0.4pt}
   \fancyfoot[C]{\zihao{-5}\thepage}
 }
-\renewcommand{\bibsection}{\section*{参考文献}\addcontentsline{toc}{section}{参考文献}}
+\renewcommand{\bibsection}{\chapter*{参考文献}\addcontentsline{toc}{chapter}{参考文献}}
 
 \newcommand{\best}[1]{\textcolor{green!45!black}{\textbf{#1}}}
 \newcommand{\worst}[1]{\textcolor{red!75!black}{\textbf{#1}}}
@@ -72,26 +83,26 @@
 \end{center}
 \addcontentsline{toc}{chapter}{摘\texorpdfstring{\quad}{ }要}
 \noindent\hspace*{\parindent}%
-在以视觉为中心的多模态检索增强生成（vision-centric mRAG）任务中，下游多模态模型能否正确作答，往往首先受限于外部视觉证据是否被准确召回。与文本 RAG 主要补充事实知识不同，本文关注的任务要求系统根据查询图像与问题文本，从外部图像库中找到能够补足回答所需信息的候选证据图像；因此，检索目标不再是一般意义上的视觉相似图像，而是对当前问题有帮助的图像证据。围绕这一检索瓶颈，本文以 MRAG-Bench 为核心平台，对其候选字段、视觉证据覆盖和场景分布进行再统计，发现数据集给定候选与人工标注正例证据并不等价：44.12\% 的样本二者完全无重叠，平均 GT 覆盖率仅为 22.78\%。这一结果说明，若不区分局部重排与真实全库检索，容易混淆候选覆盖能力和候选排序能力。
+在以视觉为中心的多模态检索增强生成（vision-centric mRAG）任务中，系统需要根据查询图像和问题文本，从外部图像库中寻找能够补足回答所需信息的视觉证据。与文本检索增强主要补充事实性文本不同，该任务面对的是查询图像、自然语言问题和候选证据图像之间的三方关系：查询图像给出待解释对象或场景，问题文本限定需要补足的视觉条件，外部图像库则提供可能的辅助证据。因此，检索目标不再只是寻找视觉外观相似的图像，而是寻找能够支撑当前问题理解与回答判断的证据图像。
 
-基于上述分析，本文将实验设计为局部重排、全库检索与查询侧扩展三个部分，并将 E8 作为本文主要系统架构：利用 Gemma~4 根据查询图像、题干与选项生成五条互补检索维度，驱动 MagicLens 在完整图像库上分路召回，再通过 RRF 列表融合得到最终证据集合，并交由 LLaVA-OneVision 完成多选题终答。所有实验均固定下游 VLM 与提示模板，使性能差异主要归因于检索与查询构造环节。全量 MRAG-Bench 测试集结果表明，E8 在 1353 个样本上达到 56.32\% 准确率，是本文非 GT 全库检索路线中的最佳结果；相较 MagicLens direct retrieval（E7）提升 8.35 个百分点，相较 CLIP corpus RAG（E3）提升 5.91 个百分点。与此同时，人工标注证据路线 E1/E5 仍保持约 60.16\% 的参考上界，说明查询侧扩展显著改善了真实全库检索效果。
+本文基于 MRAG-Bench 展开研究，该数据集将多模态问答组织为“查询图像 + 问题文本 + 外部候选图像库”的任务形式，要求系统先检索与问题相关的视觉证据，再利用查询图像和证据图像完成多选题回答。围绕这一任务，本文设计了一个由三部分组成的多模态检索增强架构：第一部分是查询侧规划，用于根据查询图像、题干和选项生成面向证据召回的检索表达；第二部分是视觉证据检索与融合，用于在完整图像库中按不同检索维度召回候选图像，并将多路结果合并为固定长度的证据集合；第三部分是多模态终答生成，用于把查询图像、检索证据和问题文本共同输入视觉语言模型，输出最终选项。该架构面向 MRAG-Bench 中问题条件视觉证据召回的需求，能够将原始问答任务拆分为查询构造、证据组织和终答生成三个可分析环节。
 
-除最终准确率外，本文还引入前五候选重叠数（Top-5 overlap，指两种检索设置的前五候选中相同图像的数量）、首位一致率（Top-1 match，指两种设置的第一名候选是否一致）、逐样本胜负统计、高频重复命中分布与 E8/E9 样本级过程记录等分析指标。实验观察到，CLIP 与 MagicLens 在 67.2\% 的样本上 Top-5 候选完全不重合，说明二者具有显著不同的检索偏好；MagicLens 还存在 Top-1“原型图吸附”偏置，部分高响应图像被大量不同查询重复命中。E8 的过程记录进一步显示，五维检索产生的 25 个候选在 RRF 融合前平均保留 19.35 个唯一候选，94.75\% 的样本存在跨维重复命中，说明多维查询确实形成了可融合的证据共识。E9 在保持同一检索侧框架、仅将终答器替换为 Gemma~4~E2B-it 后降至 38.95\%，说明最终 VLM 的多图证据整合能力同样是系统瓶颈。本文建立了包含 benchmark 复现、候选覆盖再分析、E0--E9 实验线组织、样本级过程记录、可视化图表和错误模式分析在内的统一评测方法。
+实验结果表明，完整图像库检索仍是 vision-centric mRAG 的主要瓶颈。CLIP 直接全库检索基线的整体准确率为 50.41\%，CLIP 召回后结合 MagicLens 重排为 50.33\%，MagicLens 直接全库检索为 47.97\%。本文提出的多维融合检索框架在 MRAG-Bench 全量测试集上达到 56.32\%，相较最强完整全库检索基线提升 5.91 个百分点，相较 MagicLens 直接检索提升 8.35 个百分点。与使用人工标注证据的参考设置 60.16\% 相比，本文框架仍存在进一步提升空间，但已经显著改善了非人工证据条件下的全库检索表现，说明查询侧规划、多路证据召回与列表融合能够有效缓解问题条件视觉证据召回困难。
 
-{\small\noindent\textbf{关键词：}多模态检索增强生成；混合检索；MRAG-Bench；MagicLens；查询链编排\par}
+{\small\noindent\textbf{关键词：}多模态检索增强生成；视觉证据召回；问题条件检索；多模态问答；证据可验证性\par}
 
 \clearpage
 \begin{center}
 {\zihao{3}\bfseries Abstract\par}
 \end{center}
 \addcontentsline{toc}{chapter}{Abstract}
-\noindent\hspace*{\parindent}In vision-centric multimodal retrieval-augmented generation (mRAG), final answer quality is often bounded by whether the system can retrieve useful external visual evidence. Unlike text RAG, this task requires retrieving evidence images that help answer a question conditioned on both the query image and the question text. This thesis uses MRAG-Bench as the evaluation platform and re-analyzes its candidate fields, evidence coverage, and scenario distribution. The analysis shows that provided retrieved candidates and human-annotated ground-truth evidence are not equivalent: 44.12\% of samples have no overlap, and the average GT coverage is only 22.78\%. This motivates a clear separation between local reranking and full-corpus retrieval.
+\noindent\hspace*{\parindent}In vision-centric multimodal retrieval-augmented generation (mRAG), a system must retrieve external visual evidence from an image corpus according to both a query image and a question. Unlike text-based retrieval augmentation, this task involves a three-way relation among the query image, the natural-language question, and candidate evidence images. The query image provides the object or scene to be explained, the question specifies the missing visual condition, and the external corpus provides possible supporting evidence. Therefore, the retrieval target is not merely a visually similar image, but an evidence image that can support the current question-understanding and answer-selection process.
 
-The experiments are organized into a reranking line, a corpus retrieval line, and a query-side extension line. The E8 pipeline is the main architecture: Gemma~4 generates five complementary retrieval dimensions from the query image, question, and choices; MagicLens performs per-dimension full-corpus retrieval; reciprocal rank fusion (RRF) produces the final evidence set; and a fixed LLaVA-OneVision model predicts the answer. On the full MRAG-Bench test split of 1,353 samples, E8 reaches 56.32\% accuracy, the best non-GT full-corpus retrieval result in this work. It improves over MagicLens direct retrieval (E7) by 8.35 percentage points and over CLIP corpus RAG (E3) by 5.91 points, while settings using human-annotated evidence in E1/E5 still reach 60.16\%.
+This thesis studies MRAG-Bench, where each task is organized as a query image, a question, and an external candidate image corpus. The system must first retrieve visual evidence related to the question and then answer a multiple-choice question using both the query image and the retrieved evidence images. For this task, this thesis designs a multimodal retrieval-augmented architecture with three components. The first component performs query-side planning, generating retrieval expressions from the query image, question, and choices. The second component retrieves and fuses visual evidence, searching the full image corpus along different retrieval dimensions and merging the returned lists into a fixed-size evidence set. The third component performs multimodal answer generation, feeding the query image, retrieved evidence, and question text into a vision-language model to produce the final option. This architecture decomposes MRAG-Bench into query construction, evidence organization, and answer generation.
 
-Beyond accuracy, this thesis introduces Top-5 overlap, Top-1 match rate, per-sample win/loss statistics, repeated Top-1 hit analysis, and sample-level process records for E8/E9. CLIP and MagicLens return disjoint Top-5 candidates on 67.2\% of samples, showing different retrieval preferences. MagicLens also exhibits a Top-1 prototype-attraction bias, where a small number of high-response images are repeatedly retrieved. E8 records show that five-dimensional retrieval keeps 19.35 unique candidates on average before fusion and that 94.75\% of samples contain cross-dimension repeated hits. E9 keeps the same retrieval side but replaces the answerer with Gemma~4~E2B-it, dropping to 38.95\%, which shows that multi-image evidence integration by the final VLM is also a bottleneck. Overall, this work provides a reproducible evaluation framework covering benchmark reproduction, E0--E9 experiments, sample-level records, visualization, and error-mode analysis.
+Experimental results show that full-corpus visual retrieval remains a key bottleneck in vision-centric mRAG. The CLIP direct full-corpus retrieval baseline reaches 50.41\% overall accuracy, CLIP retrieval followed by MagicLens reranking reaches 50.33\%, and MagicLens direct full-corpus retrieval reaches 47.97\%. The proposed multidimensional fusion retrieval framework reaches 56.32\% on the full MRAG-Bench test set, improving over the strongest full-corpus retrieval baseline by 5.91 percentage points and over MagicLens direct retrieval by 8.35 points. Compared with the 60.16\% reference setting using human-annotated evidence, the framework still leaves room for improvement, but it substantially improves full-corpus retrieval without manually provided evidence, showing the effectiveness of query-side planning, multi-route evidence retrieval, and list fusion.
 
-{\small\noindent\textbf{Key words:} multimodal RAG; hybrid retrieval; MRAG-Bench; MagicLens; query planning\par}
+{\small\noindent\textbf{Key words:} multimodal RAG; visual evidence retrieval; question-conditioned retrieval; multimodal question answering; evidence verifiability\par}
 
 \tableofcontents
 \clearpage
@@ -102,12 +113,13 @@ Beyond accuracy, this thesis introduces Top-5 overlap, Top-1 match rate, per-sam
 
 \cleardoublepage
 \chapter*{本科期间主要研究成果}
+\addcontentsline{toc}{chapter}{本科期间主要研究成果}
 
 \section*{发表论文}
 \begin{enumerate}[leftmargin=2em]
 \item \textcolor{red!75!black}{\textbf{Ziyan Shi}}, Y Gu, H Cui, et al. From Machine Learning to Multimodal Models: The AI Revolution in Enzyme Engineering. \textit{BioDesign Research}, 2025. DOI: \href{https://doi.org/10.1016/j.bidere.2025.100044}{10.1016/j.bidere.2025.100044}. （SCI，影响因子 4.7，JCR Q1）
-\item Yuan S, Peng N, \textcolor{red!75!black}{\textbf{Shi Z}}, et al. Detection of algal tiny objects based on morphological features. \textit{Concurrency and Computation: Practice and Experience}, 2024:e8128. DOI: \href{https://onlinelibrary.wiley.com/doi/10.1002/cpe.8128}{10.1002/cpe.8128}. （SCI/SCIE，中科院 4 区，JCR Q2）
-\item S. Yuan, N. Peng, Z. \textcolor{red!75!black}{\textbf{Shi}}, Y. Gu and B. Sun. ``MAgic: A Morphable Attention Based Algal Tiny Object Detection Model,'' in \textit{2023 10th International Conference on Behavioural and Social Computing (BESC)}, Larnaca, Cyprus, 2023, pp.~1--8. DOI: \href{https://ieeexplore.ieee.org/document/10386562}{10.1109/BESC59560.2023.10386562}. （EI，IEEE）
+\item Yuan S, Peng N, \textcolor{red!75!black}{\textbf{Shi Z}}, et al. Detection of algal tiny objects based on morphological features. \textit{Concurrency and Computation: Practice and Experience}, 2024:e8128. DOI: \href{https://www.semanticscholar.org/paper/cfffa8e8e1c916e32f03488e518ef1ee18937dd2}{10.1002/cpe.8128}. （SCI/SCIE，中科院 4 区，JCR Q2）
+\item S. Yuan, N. Peng, \textcolor{red!75!black}{\textbf{Z.Shi}}, Y. Gu and B. Sun. ``MAgic: A Morphable Attention Based Algal Tiny Object Detection Model,'' in \textit{2023 10th International Conference on Behavioural and Social Computing (BESC)}, Larnaca, Cyprus, 2023, pp.~1--8. DOI: \href{https://doi.org/10.1109/BESC59560.2023.10386562}{10.1109/BESC59560.2023.10386562}. （EI，IEEE）
 \end{enumerate}
 
 \section*{完成项目}

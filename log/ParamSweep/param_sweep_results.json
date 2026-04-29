@@ -1,0 +1,33 @@
+[
+  {
+    "exp": "E8_baseline_n5_k5",
+    "status": "ok",
+    "sweep": "baseline",
+    "n_dims": 5,
+    "dim_top_k": 5,
+    "final_top_k": 5,
+    "fusion_strategy": "rrf",
+    "processed": 1353,
+    "correct": 762,
+    "accuracy": 56.32,
+    "dim_gen_failures": 0,
+    "avg_dim_gen_time_sec": 12.901,
+    "avg_retrieval_time_sec": 3.454,
+    "avg_final_answer_time_sec": null,
+    "trace_rows": 1353,
+    "avg_input_candidates": 25.0,
+    "avg_unique_candidates": 19.349,
+    "avg_unique_ratio": 0.774,
+    "avg_sample_total_time_sec": 42.58,
+    "avg_description_time_sec": 21.007,
+    "acc_Angle": 57.45,
+    "acc_Partial": 54.07,
+    "acc_Scope": 59.8,
+    "acc_Obstruction": 57.41,
+    "acc_Temporal": 54.36,
+    "acc_Deformation": 54.9,
+    "acc_Incomplete": 29.41,
+    "acc_Biological": 56.86,
+    "acc_Others": 80.0
+  }
+]

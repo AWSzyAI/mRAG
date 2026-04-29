@@ -20,7 +20,8 @@ if [[ "${CONDA_DEFAULT_ENV:-}" != "llava" ]]; then
 fi
 
 export CUDA_DEVICE_ORDER="PCI_BUS_ID"
-export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0}"
+GPU_ID="${GPU_ID:-1}"
+export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-${GPU_ID}}"
 export CORPUS_DIR="${CORPUS_DIR:-/public/home/hzh/mRAG/data/image_corpus}"
 export DIM_GENERATOR_API_KEY="${DIM_GENERATOR_API_KEY:-}"
 MAX_SAMPLES="${MAX_SAMPLES:-0}"

@@ -512,6 +512,16 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--start-index", type=int, default=0)
     p.add_argument("--max-samples", type=int, default=0)
     p.add_argument(
+        "--samples-per-scenario",
+        type=int,
+        default=0,
+        help=(
+            "Stratified sampling cap per MRAG-Bench scenario. "
+            "Use >0 for parameter sweeps so each visual task type contributes samples; "
+            "0 disables this cap."
+        ),
+    )
+    p.add_argument(
         "--resume-from-existing",
         action="store_true",
         help="Resume from existing outputs: skip qs_id already present in answers-file and append new rows.",
@@ -550,6 +560,8 @@ def run_benchmark(args: argparse.Namespace) -> None:
     log(
         f"n_dims={args.n_dims} dim_top_k={args.dim_top_k} final_top_k={args.final_top_k} fusion={args.fusion_strategy}"
     )
+    if args.samples_per_scenario > 0:
+        log(f"samples_per_scenario={args.samples_per_scenario}")
     log(f"dim_generator_type={args.dim_generator_type} dim_model={dim_model_tag}")
     if args.trace_jsonl:
         log(f"trace_jsonl={args.trace_jsonl}")
@@ -684,6 +696,11 @@ def run_benchmark(args: argparse.Namespace) -> None:
                 qs_id = str(item.get("id"))
                 if qs_id in seen_qs_ids:
                     continue
+                scenario = str(item.get("scenario", "Unknown"))
+                if args.samples_per_scenario > 0:
+                    scenario_seen = by_scenario.get(scenario, {}).get("total", 0)
+                    if scenario_seen >= args.samples_per_scenario:
+                        continue
 
                 sample_started_at = time.strftime("%Y-%m-%d %H:%M:%S")
                 sample_t0 = time.time()
@@ -879,7 +896,7 @@ def run_benchmark(args: argparse.Namespace) -> None:
 
                 qs_id = str(item["id"])
                 gt_choice = str(item["gt_choice"])
-                scenario = str(item["scenario"])
+                scenario = str(item.get("scenario", scenario))
                 is_correct = args.final_answerer in ("llava", "gemma4") and pred_choice == gt_choice
                 sample_total = time.time() - sample_t0
                 final_answer_times.append(t_final_answer)

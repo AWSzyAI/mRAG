@@ -1,0 +1,9 @@
+# Parameter sweep artifacts to pull from remote.
+# Usage:
+#   make pull param_results        # preview
+#   make pull param_results y      # apply
+
+log/ParamSweep/
+test/run_param_analysis.sh
+scripts/summarize_param_sweep.py
+test/pipeline_multi_dim_rag.py

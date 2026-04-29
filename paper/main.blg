@@ -1,51 +1,51 @@
 This is BibTeX, Version 0.99e (TeX Live 2026)
 Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
 The top-level auxiliary file: main.aux
-The style file: unsrt.bst
+The style file: unsrtnat.bst
 Database file #1: ../doc/开题报告LaTeX/ref_ordered.bib
 Warning--empty journal in lewis2020rag
 Warning--empty journal in anthropic2024mcp
 Warning--empty journal in anthropic2024claudecode
 Warning--empty journal in langchain2024skills
-You've used 27 entries,
-            1791 wiz_defined-function locations,
-            572 strings with 8342 characters,
-and the built_in function-call counts, 6151 in all, are:
-= -- 492
-> -- 371
-< -- 5
-+ -- 134
-- -- 107
-* -- 346
-:= -- 1019
-add.period$ -- 81
-call.type$ -- 27
-change.case$ -- 27
-chr.to.int$ -- 0
-cite$ -- 31
-duplicate$ -- 296
-empty$ -- 543
-format.name$ -- 107
-if$ -- 1359
-int.to.chr$ -- 0
-int.to.str$ -- 27
-missing$ -- 27
-newline$ -- 138
-num.names$ -- 27
-pop$ -- 98
+You've used 39 entries,
+            2481 wiz_defined-function locations,
+            775 strings with 13559 characters,
+and the built_in function-call counts, 17753 in all, are:
+= -- 1401
+> -- 1201
+< -- 23
++ -- 445
+- -- 364
+* -- 1385
+:= -- 2903
+add.period$ -- 161
+call.type$ -- 39
+change.case$ -- 78
+chr.to.int$ -- 36
+cite$ -- 43
+duplicate$ -- 882
+empty$ -- 1439
+format.name$ -- 412
+if$ -- 3776
+int.to.chr$ -- 4
+int.to.str$ -- 40
+missing$ -- 39
+newline$ -- 246
+num.names$ -- 117
+pop$ -- 358
 preamble$ -- 1
-purify$ -- 0
+purify$ -- 39
 quote$ -- 0
-skip$ -- 174
+skip$ -- 571
 stack$ -- 0
-substring$ -- 269
-swap$ -- 85
-text.length$ -- 5
+substring$ -- 563
+swap$ -- 212
+text.length$ -- 11
 text.prefix$ -- 0
 top$ -- 0
-type$ -- 0
+type$ -- 273
 warning$ -- 4
-while$ -- 46
-width$ -- 29
-write$ -- 276
+while$ -- 115
+width$ -- 0
+write$ -- 572
 (There were 4 warnings)

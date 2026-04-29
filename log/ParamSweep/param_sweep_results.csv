@@ -1,0 +1,2 @@
+exp,status,sweep,n_dims,dim_top_k,final_top_k,fusion_strategy,processed,correct,accuracy,dim_gen_failures,avg_dim_gen_time_sec,avg_retrieval_time_sec,avg_final_answer_time_sec,trace_rows,avg_input_candidates,avg_unique_candidates,avg_unique_ratio,avg_sample_total_time_sec,avg_description_time_sec,acc_Angle,acc_Partial,acc_Scope,acc_Obstruction,acc_Temporal,acc_Deformation,acc_Incomplete,acc_Biological,acc_Others
+E8_baseline_n5_k5,ok,baseline,5,5,5,rrf,1353,762,56.32,0,12.901,3.454,,1353,25.0,19.349,0.774,42.58,21.007,57.45,54.07,59.8,57.41,54.36,54.9,29.41,56.86,80.0

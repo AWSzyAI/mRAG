@@ -4,6 +4,7 @@ set -euo pipefail
 cd /public/home/hzh/mRAG
 
 export CORPUS_DIR="${CORPUS_DIR:-data/image_corpus}"
+GPU_ID="${GPU_ID:-1}"
 # Keep blocking off for throughput; set to 1 only for debugging CUDA stack traces.
 export CUDA_LAUNCH_BLOCKING="${CUDA_LAUNCH_BLOCKING:-0}"
 
@@ -16,7 +17,7 @@ python test/pipeline_multi_dim_rag.py \
   --dim-generator-type gemma4_local \
   --gemma4-local-dir models/gemma4-e2b \
   --gemma4-model-id google/gemma-4-E2B-it \
-  --gemma4-device cuda:0 \
+  --gemma4-device "cuda:${GPU_ID}" \
   --gemma4-dim-rationale \
   --n-dims 5 \
   --dim-top-k 5 \
@@ -79,7 +80,7 @@ nohup python test/pipeline_multi_dim_rag.py \
   --dim-generator-type gemma4_local \
   --gemma4-local-dir models/gemma4-e2b \
   --gemma4-model-id google/gemma-4-E2B-it \
-  --gemma4-device cuda:0 \
+  --gemma4-device "cuda:${GPU_ID}" \
   --gemma4-dim-rationale \
   --n-dims 5 \
   --dim-top-k 5 \

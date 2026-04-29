@@ -43,7 +43,8 @@ log "conda_env_after=${CONDA_DEFAULT_ENV:-<unset>}"
 log "python_after=$(command -v python || echo '<missing>')"
 
 export CUDA_DEVICE_ORDER="PCI_BUS_ID"
-export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-1}"
+GPU_ID="${GPU_ID:-1}"
+export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-${GPU_ID}}"
 export EXP_DIR="${EXP_DIR:-${ROOT_DIR}/log/E4}"
 mkdir -p "${EXP_DIR}"
 
