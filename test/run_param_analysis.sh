@@ -10,6 +10,10 @@
 # Full dataset, if ever needed:
 #   SAMPLES_PER_SCENARIO=0 bash test/run_param_analysis.sh
 #
+# Resume only a slice of the sweep:
+#   START_AT=P06_dimtopk_k2 bash test/run_param_analysis.sh
+#   ONLY_EXPERIMENTS=P07_dimtopk_k3,P08_dimtopk_k4 bash test/run_param_analysis.sh
+#
 # Pull results back from remote after running there:
 #   make pull param_results y
 set -euo pipefail
@@ -44,6 +48,9 @@ OUT_ROOT="${OUT_ROOT:-log/ParamSweep}"
 SAMPLES_PER_SCENARIO="${SAMPLES_PER_SCENARIO:-10}"
 MAX_SAMPLES="${MAX_SAMPLES:-0}"
 CONTINUE_ON_ERROR="${CONTINUE_ON_ERROR:-0}"
+START_AT="${START_AT:-}"
+STOP_AFTER="${STOP_AFTER:-}"
+ONLY_EXPERIMENTS="${ONLY_EXPERIMENTS:-}"
 
 mkdir -p "${OUT_ROOT}"
 
@@ -88,9 +95,39 @@ EXPERIMENTS=(
 log "out_root=${OUT_ROOT}"
 log "samples_per_scenario=${SAMPLES_PER_SCENARIO} max_samples=${MAX_SAMPLES}"
 log "total_experiments=${#EXPERIMENTS[@]}"
+if [[ -n "${START_AT}" ]]; then
+  log "start_at=${START_AT}"
+fi
+if [[ -n "${STOP_AFTER}" ]]; then
+  log "stop_after=${STOP_AFTER}"
+fi
+if [[ -n "${ONLY_EXPERIMENTS}" ]]; then
+  log "only_experiments=${ONLY_EXPERIMENTS}"
+fi
 
+started=0
+if [[ -z "${START_AT}" ]]; then
+  started=1
+fi
 for line in "${EXPERIMENTS[@]}"; do
   read -r TAG SWEEP N_DIMS DIM_TOP_K <<< "${line}"
+  if [[ "${started}" == "0" ]]; then
+    if [[ "${TAG}" == "${START_AT}" ]]; then
+      started=1
+    else
+      log "skip ${TAG}: before START_AT=${START_AT}"
+      continue
+    fi
+  fi
+  if [[ -n "${ONLY_EXPERIMENTS}" ]]; then
+    case ",${ONLY_EXPERIMENTS}," in
+      *,"${TAG}",*) ;;
+      *)
+        log "skip ${TAG}: not in ONLY_EXPERIMENTS"
+        continue
+        ;;
+    esac
+  fi
   EXP_DIR="${OUT_ROOT}/${TAG}"
   PREFIX="$(echo "${TAG}" | tr '[:upper:]' '[:lower:]')"
   mkdir -p "${EXP_DIR}"
@@ -138,6 +175,11 @@ for line in "${EXPERIMENTS[@]}"; do
     --json-out "${OUT_ROOT}/param_sweep_results.json" \
     --md-out "${OUT_ROOT}/param_sweep_results.md" \
     --include-e8-baseline
+
+  if [[ -n "${STOP_AFTER}" && "${TAG}" == "${STOP_AFTER}" ]]; then
+    log "stop_after reached: ${STOP_AFTER}"
+    break
+  fi
 done
 
 log "all parameter experiments finished"

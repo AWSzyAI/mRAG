@@ -1,0 +1,11 @@
+{
+  "tag": "P03_dims_n3",
+  "prefix": "p03_dims_n3",
+  "sweep": "n_dims",
+  "n_dims": 3,
+  "dim_top_k": 5,
+  "final_top_k": 5,
+  "fusion_strategy": "rrf",
+  "samples_per_scenario": 10,
+  "max_samples": 0
+}

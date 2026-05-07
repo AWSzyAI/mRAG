@@ -1,0 +1,7 @@
+# E11_4 full-run artifacts: n_dims=4, dim_top_k=5, final_top_k=5.
+# Usage:
+#   make -C module pull e11_4_results        # preview
+#   make -C module pull e11_4_results y      # apply
+
+log/E11/E11_4/
+test/E11_4.sh

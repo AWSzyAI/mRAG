@@ -1,311 +1,320 @@
 \begin{thebibliography}{39}
 \providecommand{\natexlab}[1]{#1}
-\providecommand{\url}[1]{\texttt{#1}}
-\expandafter\ifx\csname urlstyle\endcsname\relax
-  \providecommand{\doi}[1]{doi: #1}\else
-  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+\providecommand{\url}[1]{#1}
+\expandafter\ifx\csname urlstyle\endcsname\relax\else
+  \urlstyle{same}\fi
+\expandafter\ifx\csname href\endcsname\relax
+  \DeclareUrlCommand\doi{\urlstyle{rm}}
+  \def\eprint#1#2{#2}
+\else
+  \def\doi#1{\href{https://doi.org/#1}{\nolinkurl{#1}}}
+  \let\eprint\href
+\fi
 
 \bibitem[Vaswani et~al.(2017)Vaswani, Shazeer, Parmar, Uszkoreit, Jones, Gomez,
   Kaiser, and Polosukhin]{vaswani2017attention}
-Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakub Uszkoreit, Llion Jones,
-  Aidan~N. Gomez, {\L}ukasz Kaiser, and Illia Polosukhin.
-\newblock Attention is all you need.
-\newblock \emph{arXiv preprint arXiv:1706.03762}, 2017.
-\newblock URL \url{https://arxiv.org/abs/1706.03762}.
+VASWANI A, SHAZEER N, PARMAR N, et~al.
+\newblock Attention is all you need\allowbreak[A/OL].
+\newblock arXiv (2017).
+\newblock \url{https://arxiv.org/abs/1706.03762}.
 
 \bibitem[Minaee et~al.(2024)Minaee, Mikolov, Nikzad, Chenaghlu, Socher,
   Amatriain, and Gao]{minaee2024llm}
-Shervin Minaee, Tomas Mikolov, Narjes Nikzad, Meysam Chenaghlu, Richard Socher,
-  Xavier Amatriain, and Jianfeng Gao.
-\newblock Large language models: A survey.
-\newblock \emph{arXiv preprint arXiv:2402.06196}, 2024.
-\newblock URL \url{https://arxiv.org/abs/2402.06196}.
+MINAEE S, MIKOLOV T, NIKZAD N, et~al.
+\newblock Large language models: a survey\allowbreak[A/OL].
+\newblock arXiv (2024).
+\newblock \url{https://arxiv.org/abs/2402.06196}.
 
 \bibitem[Lewis et~al.(2020)Lewis, Perez, Piktus, Petroni, Karpukhin, Goyal,
   K{\"u}ttler, Lewis, Yih, Rockt{\"a}schel, Riedel, and Kiela]{lewis2020rag}
-Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio Petroni, Vladimir
-  Karpukhin, Naman Goyal, Heinrich K{\"u}ttler, Mike Lewis, Yennie Yih, Tim
-  Rockt{\"a}schel, Sebastian Riedel, and Douwe Kiela.
-\newblock Retrieval-augmented generation for knowledge-intensive nlp tasks.
-\newblock 33:\penalty0 9459--9474, 2020.
-\newblock URL \url{https://arxiv.org/abs/2005.11401}.
+LEWIS P, PEREZ E, PIKTUS A, et~al.
+\newblock Retrieval-augmented generation for knowledge-intensive NLP
+  tasks\allowbreak[M/OL]//\allowbreak
+Advances in Neural Information Processing Systems: Vol.~33.
+\newblock 2020: 9459-9474.
+\newblock \url{https://arxiv.org/abs/2005.11401}.
 
 \bibitem[Gao et~al.(2023)Gao, Li, Zhao, and Su]{gao2023rag}
-Yunfan Gao, Y.~Li, D.~Zhao, and H.~Su.
-\newblock Retrieval-augmented generation for large language models: A survey.
-\newblock \emph{arXiv preprint arXiv:2312.10997}, 2023.
-\newblock URL \url{https://arxiv.org/abs/2312.10997}.
+GAO Y, LI Y, ZHAO D, et~al.
+\newblock Retrieval-augmented generation for large language models: a
+  survey\allowbreak[A/OL].
+\newblock arXiv (2023).
+\newblock \url{https://arxiv.org/abs/2312.10997}.
 
 \bibitem[Mei et~al.(2025)]{mei2025multimodalrag}
-L.~Mei et~al.
-\newblock A survey of multimodal retrieval-augmented generation.
-\newblock \emph{arXiv preprint arXiv:2504.08748}, 2025.
-\newblock URL \url{https://arxiv.org/abs/2504.08748}.
+MEI L, et~al.
+\newblock A survey of multimodal retrieval-augmented
+  generation\allowbreak[A/OL].
+\newblock arXiv (2025).
+\newblock \url{https://arxiv.org/abs/2504.08748}.
 
 \bibitem[Abootorabi et~al.(2025)]{abootorabi2025ask}
-M.M. Abootorabi et~al.
-\newblock Ask in any modality: A comprehensive survey on multimodal
-  retrieval-augmented generation.
-\newblock \emph{arXiv preprint arXiv:2502.08826}, 2025.
-\newblock URL \url{https://arxiv.org/abs/2502.08826}.
+ABOOTORABI M, et~al.
+\newblock Ask in any modality: a comprehensive survey on multimodal
+  retrieval-augmented generation\allowbreak[A/OL].
+\newblock arXiv (2025).
+\newblock \url{https://arxiv.org/abs/2502.08826}.
 
-\bibitem[Li et~al.(2023{\natexlab{a}})Li, Du, Zhou, Huang, et~al.]{li2023pope}
-Y.~Li, Y.~Du, L.~Zhou, S.~Huang, et~al.
-\newblock Evaluating object hallucination in large vision-language models.
-\newblock In \emph{Proceedings of the 2023 Conference on Empirical Methods in
-  Natural Language Processing}, pages 313--331, 2023{\natexlab{a}}.
-\newblock URL \url{https://arxiv.org/abs/2305.10355}.
+\bibitem[Li et~al.(2023)Li, Du, Zhou, Huang, et~al.]{li2023pope}
+LI Y, DU Y, ZHOU L, et~al.
+\newblock Evaluating object hallucination in large vision-language
+  models\allowbreak[C/OL]//\allowbreak
+Proceedings of the 2023 Conference on Empirical Methods in Natural Language
+  Processing.
+\newblock 2023: 313-331.
+\newblock \url{https://arxiv.org/abs/2305.10355}.
 
 \bibitem[Wang et~al.(2023)Wang, Ma, Feng, Su, Zhang, Xu, Niu, An,
   et~al.]{wang2023agent}
-Lei Wang, Chen Ma, Xinuo Feng, Xingyu Su, Ruochen Zhang, Roy Xu, Yufeng Niu,
-  Shan An, et~al.
-\newblock A survey on large language model based autonomous agents.
-\newblock \emph{arXiv preprint arXiv:2308.11432}, 2023.
-\newblock URL \url{https://arxiv.org/abs/2308.11432}.
+WANG L, MA C, FENG X, et~al.
+\newblock A survey on large language model based autonomous
+  agents\allowbreak[A/OL].
+\newblock arXiv (2023).
+\newblock \url{https://arxiv.org/abs/2308.11432}.
 
-\bibitem[Anthropic(2024{\natexlab{a}})]{anthropic2024mcp}
-Anthropic.
-\newblock Introducing the model context protocol.
-\newblock 2024{\natexlab{a}}.
-\newblock URL \url{https://www.anthropic.com/news/model-context-protocol}.
+\bibitem[Anthropic(2024)]{anthropic2024mcp}
+ANTHROPIC.
+\newblock Introducing the model context protocol\allowbreak[EB/OL].
+\newblock 2024.
+\newblock \url{https://www.anthropic.com/news/model-context-protocol}.
 
-\bibitem[Anthropic(2024{\natexlab{b}})]{anthropic2024claudecode}
-Anthropic.
-\newblock Claude code: Anthropic's ai-powered coding assistant.
-\newblock 2024{\natexlab{b}}.
-\newblock URL \url{https://www.anthropic.com/claude-code}.
+\bibitem[Anthropic(2024)]{anthropic2024claudecode}
+ANTHROPIC.
+\newblock Claude code: anthropic's AI-powered coding
+  assistant\allowbreak[EB/OL].
+\newblock 2024.
+\newblock \url{https://www.anthropic.com/claude-code}.
 
 \bibitem[LangChain(2024)]{langchain2024skills}
-LangChain.
-\newblock Langchain state of ai agents report.
+LANGCHAIN.
+\newblock LangChain state of AI agents report\allowbreak[EB/OL].
 \newblock 2024.
-\newblock URL \url{https://www.langchain.com/stateofaiagents}.
+\newblock \url{https://www.langchain.com/stateofaiagents}.
 
 \bibitem[Radford et~al.(2021)Radford, Kim, Hallacy, Ramesh, Goh, Agarwal,
   Sastry, Askell, Mishkin, Clark, et~al.]{radford2021clip}
-Alec Radford, Jong~Wook Kim, Chris Hallacy, Aditya Ramesh, Gabriel Goh,
-  Sandhini Agarwal, Girish Sastry, Amanda Askell, Pamela Mishkin, Jack Clark,
-  et~al.
+RADFORD A, KIM J~W, HALLACY C, et~al.
 \newblock Learning transferable visual models from natural language
-  supervision.
-\newblock In \emph{International Conference on Machine Learning}, pages
-  8748--8763, 2021.
-\newblock URL \url{https://arxiv.org/abs/2103.00020}.
+  supervision\allowbreak[C/OL]//\allowbreak
+International Conference on Machine Learning.
+\newblock 2021: 8748-8763.
+\newblock \url{https://arxiv.org/abs/2103.00020}.
 
-\bibitem[Zhang et~al.(2024{\natexlab{a}})]{zhang2024magiclens}
-K.~Zhang et~al.
-\newblock Magiclens: Self-supervised image retrieval with open-ended
-  instructions.
-\newblock \emph{arXiv preprint arXiv:2403.19651}, 2024{\natexlab{a}}.
-\newblock URL \url{https://arxiv.org/abs/2403.19651}.
+\bibitem[Zhang et~al.(2024)]{zhang2024magiclens}
+ZHANG K, et~al.
+\newblock MagicLens: self-supervised image retrieval with open-ended
+  instructions\allowbreak[A/OL].
+\newblock arXiv (2024).
+\newblock \url{https://arxiv.org/abs/2403.19651}.
 
 \bibitem[Xie et~al.(2024)Xie, Li, and Wang]{xie2024embodiedrag}
-T.~Xie, W.~Li, and et~al. Wang, Y.
-\newblock Embodied-rag: General non-parametric embodied memory for retrieval
-  and generation.
-\newblock \emph{arXiv preprint arXiv:2409.18313}, 2024.
-\newblock URL \url{https://arxiv.org/abs/2409.18313}.
+XIE T, LI W, WANG E~A, Y.
+\newblock Embodied-RAG: general non-parametric embodied memory for retrieval
+  and generation\allowbreak[A/OL].
+\newblock arXiv (2024).
+\newblock \url{https://arxiv.org/abs/2409.18313}.
 
 \bibitem[Carìa et~al.(2025)]{caria2025bci}
-A.~Carìa et~al.
-\newblock Towards predictive communication: The fusion of large language models
-  and brain--computer interface.
-\newblock \emph{Sensors}, 25\penalty0 (13):\penalty0 3987, 2025.
-\newblock \doi{10.3390/s25133987}.
-\newblock URL \url{https://pubmed.ncbi.nlm.nih.gov/40648241/}.
+CARÌA A, et~al.
+\newblock Towards predictive communication: the fusion of large language models
+  and brain--computer interface\allowbreak[J/OL].
+\newblock Sensors, 2025, 25\allowbreak (13): 3987.
+\newblock \url{https://pubmed.ncbi.nlm.nih.gov/40648241/}.
+\newblock DOI: \doi{10.3390/s25133987}.
 
 \bibitem[Zhao et~al.(2025)Zhao, Dong, Zhu, and Ying]{zhao2025memoryrecall}
-Yuxiao Zhao, Guohua Dong, Lei Zhu, and Xiaomin Ying.
-\newblock Memory recall: Retrieval-augmented mind reconstruction for brain
-  decoding.
-\newblock \emph{Information Fusion}, 123:\penalty0 103280, 2025.
-\newblock \doi{10.1016/j.inffus.2025.103280}.
-\newblock URL \url{https://doi.org/10.1016/j.inffus.2025.103280}.
+ZHAO Y, DONG G, ZHU L, et~al.
+\newblock Memory recall: retrieval-augmented mind reconstruction for brain
+  decoding\allowbreak[J/OL].
+\newblock Information Fusion, 2025, 123: 103280.
+\newblock \url{https://doi.org/10.1016/j.inffus.2025.103280}.
 
 \bibitem[Team(2025)]{genesis2025}
-Research Team.
-\newblock Genesis: A generative model of episodic-semantic interaction.
-\newblock \emph{arXiv preprint arXiv:2510.15828}, 2025.
-\newblock URL \url{https://arxiv.org/abs/2510.15828}.
+TEAM R.
+\newblock GENESIS: a generative model of episodic-semantic
+  interaction\allowbreak[A/OL].
+\newblock arXiv (2025).
+\newblock \url{https://arxiv.org/abs/2510.15828}.
 
 \bibitem[Antol et~al.(2015)Antol, Agrawal, Lu, Mitchell, Batra, Zitnick, and
   Parikh]{antol2015vqa}
-Stanislaw Antol, Aishwarya Agrawal, Jiasen Lu, Margaret Mitchell, Dhruv Batra,
-  C.~Lawrence Zitnick, and Devi Parikh.
-\newblock Vqa: Visual question answering.
-\newblock In \emph{Proceedings of the IEEE International Conference on Computer
-  Vision}, pages 2425--2433, 2015.
-\newblock URL \url{https://arxiv.org/abs/1505.00468}.
+ANTOL S, AGRAWAL A, LU J, et~al.
+\newblock VQA: visual question answering\allowbreak[C/OL]//\allowbreak
+Proceedings of the IEEE International Conference on Computer Vision.
+\newblock 2015: 2425-2433.
+\newblock \url{https://arxiv.org/abs/1505.00468}.
 
 \bibitem[Yang et~al.(2016)Yang, He, Gao, Deng, and Smola]{yang2016san}
-Zichao Yang, Xiaodong He, Jianfeng Gao, Li~Deng, and Alex Smola.
-\newblock Stacked attention networks for image question answering.
-\newblock In \emph{Proceedings of the IEEE Conference on Computer Vision and
-  Pattern Recognition}, pages 21--29, 2016.
-\newblock URL \url{https://arxiv.org/abs/1511.02274}.
+YANG Z, HE X, GAO J, et~al.
+\newblock Stacked attention networks for image question
+  answering\allowbreak[C/OL]//\allowbreak
+Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition.
+\newblock 2016: 21-29.
+\newblock \url{https://arxiv.org/abs/1511.02274}.
 
 \bibitem[Anderson et~al.(2018)Anderson, He, Buehler, Teney, Johnson, Gould, and
   Zhang]{anderson2018bottomup}
-Peter Anderson, Xiaodong He, Chris Buehler, Damien Teney, Mark Johnson, Stephen
-  Gould, and Lei Zhang.
+ANDERSON P, HE X, BUEHLER C, et~al.
 \newblock Bottom-up and top-down attention for image captioning and visual
-  question answering.
-\newblock In \emph{Proceedings of the IEEE Conference on Computer Vision and
-  Pattern Recognition}, pages 6077--6086, 2018.
-\newblock URL \url{https://arxiv.org/abs/1707.07998}.
+  question answering\allowbreak[C/OL]//\allowbreak
+Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition.
+\newblock 2018: 6077-6086.
+\newblock \url{https://arxiv.org/abs/1707.07998}.
 
-\bibitem[Tan and Bansal(2019)]{tan2019lxmert}
-Hao Tan and Mohit Bansal.
-\newblock Lxmert: Learning cross-modality encoder representations from
-  transformers.
-\newblock In \emph{Proceedings of the 2019 Conference on Empirical Methods in
-  Natural Language Processing}, pages 5100--5111, 2019.
-\newblock URL \url{https://arxiv.org/abs/1908.07490}.
+\bibitem[Tan et~al.(2019)Tan and Bansal]{tan2019lxmert}
+TAN H, BANSAL M.
+\newblock LXMERT: learning cross-modality encoder representations from
+  transformers\allowbreak[C/OL]//\allowbreak
+Proceedings of the 2019 Conference on Empirical Methods in Natural Language
+  Processing.
+\newblock 2019: 5100-5111.
+\newblock \url{https://arxiv.org/abs/1908.07490}.
 
 \bibitem[Liu et~al.(2023)Liu, Li, Wu, and Lee]{liu2023llava}
-Haotian Liu, Chunyuan Li, Qingyang Wu, and Yong~Jae Lee.
-\newblock Visual instruction tuning.
-\newblock \emph{arXiv preprint arXiv:2304.08485}, 2023.
-\newblock URL \url{https://arxiv.org/abs/2304.08485}.
+LIU H, LI C, WU Q, et~al.
+\newblock Visual instruction tuning\allowbreak[A/OL].
+\newblock arXiv (2023).
+\newblock \url{https://arxiv.org/abs/2304.08485}.
 
 \bibitem[Goyal et~al.(2017)Goyal, Khot, Summers-Stay, Batra, and
   Parikh]{goyal2017vqa}
-Yash Goyal, Tejas Khot, Douglas Summers-Stay, Dhruv Batra, and Devi Parikh.
-\newblock Making the v in vqa matter: Elevating the role of image understanding
-  in visual question answering.
-\newblock In \emph{Proceedings of the IEEE Conference on Computer Vision and
-  Pattern Recognition}, pages 6904--6913, 2017.
-\newblock URL \url{https://arxiv.org/abs/1612.00837}.
+GOYAL Y, KHOT T, SUMMERS-STAY D, et~al.
+\newblock Making the V in VQA matter: elevating the role of image understanding
+  in visual question answering\allowbreak[C/OL]//\allowbreak
+Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition.
+\newblock 2017: 6904-6913.
+\newblock \url{https://arxiv.org/abs/1612.00837}.
 
 \bibitem[Marino et~al.(2019)Marino, Rastegari, Farhadi, and
   Mottaghi]{marino2019okvqa}
-Kenneth Marino, Mohammad Rastegari, Ali Farhadi, and Roozbeh Mottaghi.
-\newblock Ok-vqa: A visual question answering benchmark requiring external
-  knowledge.
-\newblock In \emph{Proceedings of the IEEE/CVF Conference on Computer Vision
-  and Pattern Recognition}, pages 3195--3204, 2019.
-\newblock URL \url{https://arxiv.org/abs/1906.00067}.
+MARINO K, RASTEGARI M, FARHADI A, et~al.
+\newblock OK-VQA: a visual question answering benchmark requiring external
+  knowledge\allowbreak[C/OL]//\allowbreak
+Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern
+  Recognition.
+\newblock 2019: 3195-3204.
+\newblock \url{https://arxiv.org/abs/1906.00067}.
 
 \bibitem[Schwenk et~al.(2022)Schwenk, Khandelwal, Clark, Marino, and
   Mottaghi]{schwenk2022aokvqa}
-Dustin Schwenk, Apoorv Khandelwal, Christopher Clark, Kenneth Marino, and
-  Roozbeh Mottaghi.
-\newblock A-okvqa: A benchmark for visual question answering using world
-  knowledge.
-\newblock In \emph{Computer Vision -- ECCV 2022}, pages 146--162. Springer,
-  2022.
-\newblock \doi{10.1007/978-3-031-20074-8_9}.
-\newblock URL \url{https://arxiv.org/abs/2206.01718}.
+SCHWENK D, KHANDELWAL A, CLARK C, et~al.
+\newblock A-OKVQA: a benchmark for visual question answering using world
+  knowledge\allowbreak[C/OL]//\allowbreak
+Computer Vision -- ECCV 2022.
+\newblock Springer, 2022: 146-162.
+\newblock \url{https://arxiv.org/abs/2206.01718}.
+\newblock DOI: \doi{10.1007/978-3-031-20074-8_9}.
 
 \bibitem[Chang et~al.(2022)Chang, Narang, Suzuki, Cao, Gao, and
   Bisk]{chang2022webqa}
-Yingshan Chang, Mridu Narang, Hisami Suzuki, Guihong Cao, Jianfeng Gao, and
-  Yonatan Bisk.
-\newblock Webqa: Multihop and multimodal qa.
-\newblock In \emph{Proceedings of the IEEE/CVF Conference on Computer Vision
-  and Pattern Recognition}, pages 16495--16504, 2022.
-\newblock \doi{10.1109/CVPR52688.2022.01600}.
-\newblock URL \url{https://arxiv.org/abs/2109.00590}.
+CHANG Y, NARANG M, SUZUKI H, et~al.
+\newblock WebQA: multihop and multimodal QA\allowbreak[C/OL]//\allowbreak
+Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern
+  Recognition.
+\newblock 2022: 16495-16504.
+\newblock \url{https://arxiv.org/abs/2109.00590}.
+\newblock DOI: \doi{10.1109/CVPR52688.2022.01600}.
 
 \bibitem[Chen et~al.(2023)Chen, Hu, Luan, Sun, Changpinyo, Ritter, and
   Chang]{chen2023infoseek}
-Yang Chen, Hexiang Hu, Yi~Luan, Haitian Sun, Soravit Changpinyo, Alan Ritter,
-  and Ming-Wei Chang.
+CHEN Y, HU H, LUAN Y, et~al.
 \newblock Can pre-trained vision and language models answer visual
-  information-seeking questions?
-\newblock \emph{arXiv preprint arXiv:2302.11713}, 2023.
-\newblock URL \url{https://arxiv.org/abs/2302.11713}.
+  information-seeking questions?\allowbreak[A/OL].
+\newblock arXiv (2023).
+\newblock \url{https://arxiv.org/abs/2302.11713}.
 
 \bibitem[Hu et~al.(2024)]{hu2024mragbench}
-W.~Hu et~al.
-\newblock Mrag-bench: Vision-centric evaluation for retrieval-augmented
-  multimodal models.
-\newblock \emph{arXiv preprint arXiv:2410.08182}, 2024.
-\newblock URL \url{https://arxiv.org/abs/2410.08182}.
+HU W, et~al.
+\newblock MRAG-bench: vision-centric evaluation for retrieval-augmented
+  multimodal models\allowbreak[A/OL].
+\newblock arXiv (2024).
+\newblock \url{https://arxiv.org/abs/2410.08182}.
 
 \bibitem[Mao et~al.(2025)Mao, Yang, and Shou]{mao2025unirl}
-Weijia Mao, Zhenheng Yang, and Mike~Zheng Shou.
-\newblock Unirl: Self-improving unified multimodal models via supervised and
-  reinforcement learning.
-\newblock \emph{arXiv preprint arXiv:2505.23380}, 2025.
-\newblock URL \url{https://arxiv.org/abs/2505.23380}.
+MAO W, YANG Z, SHOU M~Z.
+\newblock UniRL: self-improving unified multimodal models via supervised and
+  reinforcement learning\allowbreak[A/OL].
+\newblock arXiv (2025).
+\newblock \url{https://arxiv.org/abs/2505.23380}.
 
 \bibitem[Li et~al.(2022)Li, Li, Xiong, and Hoi]{li2022blip}
-Junnan Li, Dongxu Li, Caiming Xiong, and Steven Hoi.
-\newblock Blip: Bootstrapping language-image pre-training for unified
-  vision-language understanding and generation.
-\newblock In \emph{Proceedings of the 39th International Conference on Machine
-  Learning}, pages 12888--12900, 2022.
-\newblock URL \url{https://arxiv.org/abs/2201.12086}.
+LI J, LI D, XIONG C, et~al.
+\newblock BLIP: bootstrapping language-image pre-training for unified
+  vision-language understanding and generation\allowbreak[C/OL]//\allowbreak
+Proceedings of the 39th International Conference on Machine Learning.
+\newblock 2022: 12888-12900.
+\newblock \url{https://arxiv.org/abs/2201.12086}.
 
 \bibitem[Yao et~al.(2023)Yao, Zhao, Yu, Du, Shafran, Narasimhan, and
   Cao]{yao2023react}
-Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran, Karthik Narasimhan,
-  and Yuan Cao.
-\newblock React: Synergizing reasoning and acting in language models.
-\newblock In \emph{International Conference on Learning Representations}, 2023.
-\newblock URL \url{https://arxiv.org/abs/2210.03629}.
+YAO S, ZHAO J, YU D, et~al.
+\newblock ReAct: synergizing reasoning and acting in language
+  models\allowbreak[C/OL]//\allowbreak
+International Conference on Learning Representations.
+\newblock 2023.
+\newblock \url{https://arxiv.org/abs/2210.03629}.
 
 \bibitem[Schick et~al.(2023)Schick, Dwivedi-Yu, Dess{\`i}, Raileanu, Lomeli,
   Hambro, Zettlemoyer, Cancedda, and Scialom]{schick2023toolformer}
-Timo Schick, Jane Dwivedi-Yu, Roberto Dess{\`i}, Roberta Raileanu, Maria
-  Lomeli, Eric Hambro, Luke Zettlemoyer, Nicola Cancedda, and Thomas Scialom.
-\newblock Toolformer: Language models can teach themselves to use tools.
-\newblock \emph{arXiv preprint arXiv:2302.04761}, 2023.
-\newblock URL \url{https://arxiv.org/abs/2302.04761}.
+SCHICK T, DWIVEDI-YU J, DESS{\`I} R, et~al.
+\newblock Toolformer: language models can teach themselves to use
+  tools\allowbreak[A/OL].
+\newblock arXiv (2023).
+\newblock \url{https://arxiv.org/abs/2302.04761}.
 
 \bibitem[Gomez et~al.(2021)]{gomez2021align}
-Aidan Gomez et~al.
-\newblock Align: Scaling up visual and vision-language representation learning
-  with noisy text supervision.
-\newblock \emph{Google Research Blog}, 2021.
-\newblock URL
+GOMEZ A, et~al.
+\newblock ALIGN: scaling up visual and vision-language representation learning
+  with noisy text supervision\allowbreak[J/OL].
+\newblock Google Research Blog, 2021.
+\newblock
   \url{https://research.google/blog/align-scaling-up-visual-and-vision-language-representation-learning-with-noisy-text-supervision/}.
 
 \bibitem[Zhai et~al.(2023)Zhai, Mustafa, Kolesnikov, and Beyer]{zhai2023siglip}
-Xiaohua Zhai, Basil Mustafa, Alexander Kolesnikov, and Lucas Beyer.
-\newblock Sigmoid loss for language image pre-training.
-\newblock \emph{arXiv preprint arXiv:2303.15343}, 2023.
-\newblock URL \url{https://arxiv.org/abs/2303.15343}.
+ZHAI X, MUSTAFA B, KOLESNIKOV A, et~al.
+\newblock Sigmoid loss for language image pre-training\allowbreak[A/OL].
+\newblock arXiv (2023).
+\newblock \url{https://arxiv.org/abs/2303.15343}.
 
 \bibitem[Li et~al.(2021)Li, Selvaraju, Gotmare, Joty, Xiong, and
   Hoi]{li2021albef}
-Junnan Li, Ramprasaath~R. Selvaraju, Akhilesh Gotmare, Shafiq Joty, Caiming
-  Xiong, and Steven C.~H. Hoi.
-\newblock Align before fuse: Vision and language representation learning with
-  momentum distillation.
-\newblock In \emph{Advances in Neural Information Processing Systems}, 2021.
-\newblock URL \url{https://arxiv.org/abs/2107.07651}.
+LI J, SELVARAJU R~R, GOTMARE A, et~al.
+\newblock Align before fuse: vision and language representation learning with
+  momentum distillation\allowbreak[C/OL]//\allowbreak
+Advances in Neural Information Processing Systems.
+\newblock 2021.
+\newblock \url{https://arxiv.org/abs/2107.07651}.
 
-\bibitem[Li et~al.(2023{\natexlab{b}})Li, Li, Savarese, and Hoi]{li2023blip2}
-Junnan Li, Dongxu Li, Silvio Savarese, and Steven Hoi.
-\newblock Blip-2: Bootstrapping language-image pre-training with frozen image
-  encoders and large language models.
-\newblock In \emph{Proceedings of the 40th International Conference on Machine
-  Learning}, 2023{\natexlab{b}}.
-\newblock URL \url{https://arxiv.org/abs/2301.12597}.
+\bibitem[Li et~al.(2023)Li, Li, Savarese, and Hoi]{li2023blip2}
+LI J, LI D, SAVARESE S, et~al.
+\newblock BLIP-2: bootstrapping language-image pre-training with frozen image
+  encoders and large language models\allowbreak[C/OL]//\allowbreak
+Proceedings of the 40th International Conference on Machine Learning.
+\newblock 2023.
+\newblock \url{https://arxiv.org/abs/2301.12597}.
 
-\bibitem[Zhang et~al.(2024{\natexlab{b}})Zhang, Zhang, Dong, Zang, and
+\bibitem[Zhang et~al.(2024)Zhang, Zhang, Dong, Zang, and
   Wang]{zhang2024longclip}
-Beichen Zhang, Pan Zhang, Xiaoyi Dong, Yuhang Zang, and Jiaqi Wang.
-\newblock Long-clip: Unlocking the long-text capability of clip.
-\newblock \emph{arXiv preprint arXiv:2403.15378}, 2024{\natexlab{b}}.
-\newblock URL \url{https://arxiv.org/abs/2403.15378}.
+ZHANG B, ZHANG P, DONG X, et~al.
+\newblock Long-CLIP: unlocking the long-text capability of
+  CLIP\allowbreak[A/OL].
+\newblock arXiv (2024).
+\newblock \url{https://arxiv.org/abs/2403.15378}.
 
 \bibitem[Xie et~al.(2025)]{xie2025fgclip}
-C.~Xie et~al.
-\newblock Fg-clip: Fine-grained visual and textual alignment.
-\newblock \emph{arXiv preprint arXiv:2505.05071}, 2025.
-\newblock URL \url{https://arxiv.org/abs/2505.05071}.
+XIE C, et~al.
+\newblock FG-CLIP: fine-grained visual and textual alignment\allowbreak[A/OL].
+\newblock arXiv (2025).
+\newblock \url{https://arxiv.org/abs/2505.05071}.
 
 \bibitem[Girdhar et~al.(2023)Girdhar, El-Nouby, Liu, Singh, Alwala, Joulin, and
   Misra]{girdhar2023imagebind}
-Rohit Girdhar, Alaaeldin El-Nouby, Zhuang Liu, Mannat Singh, Kalyan~Vasudev
-  Alwala, Armand Joulin, and Ishan Misra.
-\newblock Imagebind: One embedding space to bind them all.
-\newblock In \emph{Proceedings of the IEEE/CVF Conference on Computer Vision
-  and Pattern Recognition}, 2023.
-\newblock URL \url{https://arxiv.org/abs/2305.05665}.
+GIRDHAR R, EL-NOUBY A, LIU Z, et~al.
+\newblock ImageBind: one embedding space to bind them
+  all\allowbreak[C/OL]//\allowbreak
+Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern
+  Recognition.
+\newblock 2023.
+\newblock \url{https://arxiv.org/abs/2305.05665}.
 
 \end{thebibliography}

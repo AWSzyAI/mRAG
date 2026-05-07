@@ -15,7 +15,7 @@ MODULE_NAME ?= $(notdir $(MODULE_DIR))
 # =====================================================================
 
 # SYNC_HOST ?= nnu
-# SYNC_HOST ?= AB
+SYNC_HOST ?= AB
 # SYNC_HOST ?= featurize
 # SYNC_HOST ?= AC
 # SYNC_HOST ?= zhichuanyun

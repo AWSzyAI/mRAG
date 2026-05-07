@@ -1,0 +1,11 @@
+{
+  "tag": "P05_dimtopk_k1",
+  "prefix": "p05_dimtopk_k1",
+  "sweep": "dim_top_k",
+  "n_dims": 5,
+  "dim_top_k": 1,
+  "final_top_k": 5,
+  "fusion_strategy": "rrf",
+  "samples_per_scenario": 10,
+  "max_samples": 0
+}

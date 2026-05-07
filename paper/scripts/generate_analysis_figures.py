@@ -6,8 +6,7 @@
     python paper/scripts/generate_analysis_figures.py
 
 这会重新生成 `paper/images/` 下的全部分析图，其中
-`corpus_scenario_radar.png` 默认画 E0--E10 的全部可比实验，并按雷达
-多边形面积从大到小排序。
+`corpus_scenario_radar.png` 默认画 E0--E10 以及 E11_4 的全部可比实验。
 
 如果后续只想重画部分雷达图，可以改 `RADAR_RUNS`。
 """
@@ -47,8 +46,8 @@ SCENARIO_LABELS = {
     "Obstruction": "Occlusion",
 }
 
-# 雷达图展示的实验集合。实际绘制顺序会按雷达多边形面积从大到小自动排序。
-RADAR_RUNS = ["E0", "E1", "E2", "E3", "E4", "E5", "E6", "E7", "E8", "E9", "E10"]
+# 雷达图展示的实验集合。E11_4 紧跟 E8，便于比较参数优化前后。
+RADAR_RUNS = ["E0", "E1", "E2", "E3", "E4", "E5", "E6", "E7", "E8", "E11_4", "E9", "E10"]
 
 EXPERIMENT_NAMES = {
     "E0": "E0 GT-RAG",
@@ -60,6 +59,7 @@ EXPERIMENT_NAMES = {
     "E6": "E6 CLIP+ML Rerank",
     "E7": "E7 MagicLens-RAG",
     "E8": "E8 MultiDim+RRF",
+    "E11_4": "E11_4 MultiDim+RRF",
     "E9": "E9 Gemma4 Answerer",
     "E10": "E10 No query rewrite",
 }
@@ -74,6 +74,7 @@ EXPERIMENT_COLORS = {
     "E6": "#e45756",
     "E7": "#54a24b",
     "E8": "#b279a2",
+    "E11_4": "#7f3c8d",
     "E9": "#6b6ecf",
     "E10": "#17becf",
 }
@@ -220,6 +221,14 @@ def load_experiment_metrics():
         "overall": 56.32,
         "by_scenario": norm_scenario_dict(load_json(ROOT / "log" / "E8_full" / "e8_full_summary.json")["by_scenario_accuracy"]),
     }
+    e11_4_summary_path = ROOT / "module" / "log" / "E11" / "E11_4" / "e11_4_summary.json"
+    if not e11_4_summary_path.is_file():
+        e11_4_summary_path = ROOT / "log" / "E11" / "E11_4" / "e11_4_summary.json"
+    e11_4_summary = load_json(e11_4_summary_path)
+    data["E11_4"] = {
+        "overall": float(e11_4_summary["accuracy"]),
+        "by_scenario": norm_scenario_dict(e11_4_summary["by_scenario_accuracy"]),
+    }
     data["E9"] = {
         "overall": 38.95,
         "by_scenario": norm_scenario_dict(load_json(ROOT / "log" / "E9" / "e9_gemma4_answer_summary.json")["by_scenario_accuracy"]),
@@ -233,7 +242,7 @@ def load_experiment_metrics():
 
 
 def make_overall_accuracy_bar(exp):
-    order = ["E0", "E1", "E2", "E3", "E4", "E5", "E6", "E7", "E8", "E9", "E10"]
+    order = ["E0", "E1", "E2", "E3", "E4", "E5", "E6", "E7", "E8", "E11_4", "E9", "E10"]
     vals = [exp[k]["overall"] for k in order]
     colors = [EXPERIMENT_COLORS[k] for k in order]
 
@@ -241,7 +250,7 @@ def make_overall_accuracy_bar(exp):
     bars = ax.bar(order, vals, color=colors)
     ax.set_ylim(35, 62.5)
     ax.set_ylabel("Overall Accuracy (%)")
-    ax.set_title("Overall Accuracy across E0-E10")
+    ax.set_title("Overall Accuracy across E0-E10 and E11_4")
     annotate_bars(ax, bars, fmt="{:.2f}", dy=0.15, fontsize=7.5)
     fig.tight_layout()
     fig.savefig(IMG_DIR / "overall_accuracy_e0_e10.png", dpi=220)
@@ -282,7 +291,7 @@ def make_corpus_scenario_radar(exp):
 
     The output filename is kept as `corpus_scenario_radar.png` because
     `paper/content.tex` already references it. The content is now the full
-    E0--E10 scenario ability map rather than only E3/E6/E7. The figure uses
+    E0--E10 plus E11_4 scenario ability map rather than only E3/E6/E7. The figure uses
     two side-by-side radar panels: a 0--100 global view and a tighter view
     whose outer radius equals the maximum value among all plotted runs.
     """
@@ -299,8 +308,7 @@ def make_corpus_scenario_radar(exp):
         values_by_run[run] = [exp[run]["by_scenario"][k] for k in SCENARIO_ORDER]
 
     max_value = max(max(vals) for vals in values_by_run.values())
-    areas_by_run = {run: radar_polygon_area(vals) for run, vals in values_by_run.items()}
-    order = sorted(order, key=lambda run: areas_by_run[run], reverse=True)
+    # Keep the semantic order above so E8 and E11_4 are adjacent in the legend.
 
     fig, axes = plt.subplots(1, 2, figsize=(15.2, 7.8), subplot_kw={"polar": True})
 
@@ -319,8 +327,10 @@ def make_corpus_scenario_radar(exp):
         },
     ]
 
-    # Draw E8 last with thicker line so the main architecture stands out in the stack.
-    draw_order = [r for r in order if r != "E8"] + (["E8"] if "E8" in order else [])
+    # Draw E8 and E11_4 last with thicker lines so the main architecture and
+    # parameter-optimized variant stand out in the stack.
+    focus_runs = [r for r in ("E8", "E11_4") if r in order]
+    draw_order = [r for r in order if r not in focus_runs] + focus_runs
     handles = []
     labels_for_legend = []
     first_panel_handles: dict = {}
@@ -338,8 +348,8 @@ def make_corpus_scenario_radar(exp):
 
         for run in draw_order:
             vals = values_by_run[run] + values_by_run[run][:1]
-            lw = 3.15 if run == "E8" else 1.7
-            z = 3 if run == "E8" else 1
+            lw = 3.15 if run in focus_runs else 1.7
+            z = 3 if run in focus_runs else 1
             line = ax.plot(
                 angles,
                 vals,
@@ -355,7 +365,7 @@ def make_corpus_scenario_radar(exp):
         handles.append(first_panel_handles[run])
         labels_for_legend.append(EXPERIMENT_NAMES.get(run, run))
 
-    fig.suptitle("Scenario Ability Map: E0-E10 Experiments", y=0.98, fontsize=17)
+    fig.suptitle("Scenario Ability Map: E0-E10 and E11_4 Experiments", y=0.98, fontsize=17)
     fig.legend(
         handles,
         labels_for_legend,

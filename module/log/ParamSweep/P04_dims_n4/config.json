@@ -1,0 +1,11 @@
+{
+  "tag": "P04_dims_n4",
+  "prefix": "p04_dims_n4",
+  "sweep": "n_dims",
+  "n_dims": 4,
+  "dim_top_k": 5,
+  "final_top_k": 5,
+  "fusion_strategy": "rrf",
+  "samples_per_scenario": 10,
+  "max_samples": 0
+}

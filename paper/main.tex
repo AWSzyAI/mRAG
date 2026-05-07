@@ -15,7 +15,7 @@
 \usepackage{fancyhdr}
 \usepackage{titlesec}
 \usepackage[a4paper,left=2.6cm,right=2.6cm,top=2.8cm,bottom=2.8cm]{geometry}
-\usepackage[super,sort&compress]{natbib}
+\usepackage[sort&compress]{gbt7714}
 
 \graphicspath{{images/}}
 \onehalfspacing
@@ -24,20 +24,67 @@
 \setlength{\parindent}{2em}
 \setlength{\parskip}{0pt}
 \setlength{\headheight}{15pt}
-\captionsetup{font={small},labelfont=bf,textfont=normalfont,labelsep=space,justification=centering}
+\setcounter{topnumber}{5}
+\setcounter{bottomnumber}{5}
+\setcounter{totalnumber}{8}
+\renewcommand{\topfraction}{0.95}
+\renewcommand{\bottomfraction}{0.90}
+\renewcommand{\textfraction}{0.05}
+\renewcommand{\floatpagefraction}{0.90}
+\setlength{\floatsep}{0.5\baselineskip plus 2pt minus 2pt}
+\setlength{\textfloatsep}{0.6\baselineskip plus 2pt minus 2pt}
+\setlength{\intextsep}{0.5\baselineskip plus 2pt minus 2pt}
+\DeclareCaptionFont{thesiscaption}{\songti\zihao{5}\setstretch{1}}
+\captionsetup{font={thesiscaption},labelfont={thesiscaption,bf},textfont=thesiscaption,labelsep=space,justification=centering,singlelinecheck=false,aboveskip=0.5\baselineskip,belowskip=\baselineskip}
 \titleformat{\chapter}[block]{\centering\bfseries\zihao{3}}{第\,\thechapter\,章}{1em}{}
-\titlespacing*{\chapter}{0pt}{0.5\baselineskip}{0.5\baselineskip}
+\titlespacing*{\chapter}{0pt}{-1.5\baselineskip}{\baselineskip}
 \titleformat{\section}[block]{\bfseries\zihao{4}}{\thesection}{0.75em}{}
 \titlespacing*{\section}{0pt}{0.5\baselineskip}{0.5\baselineskip}
 \titleformat{\subsection}[block]{\bfseries\zihao{-4}}{\thesubsection}{0.75em}{}
 \titlespacing*{\subsection}{0pt}{0.5\baselineskip}{0.5\baselineskip}
 \titleformat{\subsubsection}[runin]{\bfseries\zihao{-4}}{\thesubsubsection}{0.75em}{}[。]
 \makeatletter
-\let\orig@l@chapter\l@chapter
+\newlength{\thesisTocSectionIndent}
+\newlength{\thesisTocSubsectionIndent}
+\setlength{\thesisTocSectionIndent}{0.74cm}
+\setlength{\thesisTocSubsectionIndent}{1.11cm}
+\renewcommand\tableofcontents{%
+  \chapter*{\contentsname
+    \@mkboth{\MakeUppercase\contentsname}{\MakeUppercase\contentsname}}%
+  \begingroup
+    \songti\zihao{-4}\setstretch{1.5}%
+    \@starttoc{toc}%
+  \endgroup
+}
+\newcommand*\thesis@tocline[5]{%
+  \ifnum #1>\c@tocdepth\else
+    \vskip \z@ \@plus.2\p@
+    {\parindent 0pt%
+     \leftskip #2\relax
+     \rightskip \@tocrmarg
+     \parfillskip -\rightskip
+     \leavevmode
+     #4\nobreak
+     \leaders\hbox{$\m@th\mkern\@dotsep mu\hbox{.}\mkern\@dotsep mu$}\hfill
+     \nobreak\hb@xt@\@pnumwidth{\hfil\normalfont #5}\par}%
+  \fi
+}
 \renewcommand*\l@chapter[2]{%
   \begingroup
-  \renewcommand*\numberline[1]{第##1章\hspace{0.8em}}%
-  \orig@l@chapter{#1}{#2}%
+  \renewcommand*\numberline[1]{第\hspace{0.3em}##1\hspace{0.3em}章\hspace{0.8em}}%
+  \thesis@tocline{0}{0cm}{1.8cm}{#1}{#2}%
+  \endgroup
+}
+\renewcommand*\l@section[2]{%
+  \begingroup
+  \renewcommand*\numberline[1]{##1\hspace{0.8em}}%
+  \thesis@tocline{1}{\thesisTocSectionIndent}{1.4cm}{#1}{#2}%
+  \endgroup
+}
+\renewcommand*\l@subsection[2]{%
+  \begingroup
+  \renewcommand*\numberline[1]{##1\hspace{0.8em}}%
+  \thesis@tocline{2}{\thesisTocSubsectionIndent}{1.9cm}{#1}{#2}%
   \endgroup
 }
 \makeatother
@@ -53,6 +100,9 @@
   \fancyfoot[C]{\zihao{-5}\thepage}
 }
 \renewcommand{\bibsection}{\chapter*{参考文献}\addcontentsline{toc}{chapter}{参考文献}}
+\renewcommand{\bibfont}{\songti\zihao{-4}\setstretch{1.5}}
+\setlength{\bibhang}{0pt}
+\setlength{\bibsep}{0pt}
 
 \newcommand{\best}[1]{\textcolor{green!45!black}{\textbf{#1}}}
 \newcommand{\worst}[1]{\textcolor{red!75!black}{\textbf{#1}}}
@@ -62,6 +112,17 @@
 \newcommand{\upperbase}[1]{\textcolor{green!45!black}{\textbf{#1}}}
 \newcommand{\lowerbase}[1]{\textcolor{red!75!black}{\textbf{#1}}}
 \newcommand{\modelcap}[1]{\textcolor{blue!70!black}{\textbf{#1}}}
+\setmainfont{Times New Roman}
+\newcommand{\researchheading}[1]{%
+  \par\noindent{\bfseries #1：}\par
+}
+\newenvironment{researchitems}{%
+  \begin{sloppypar}
+  \begin{enumerate}[label={[\arabic*]},leftmargin=2em,labelsep=1em,itemsep=0.5\baselineskip,topsep=0.5\baselineskip,parsep=0pt]
+}{%
+  \end{enumerate}
+  \end{sloppypar}
+}
 \newcommand{\thesistitle}{基于混合检索器的多模态生成模型研究与实现}
 \newcommand{\thesisauthor}{时子延}
 \newcommand{\thesisid}{19220422}
@@ -87,22 +148,22 @@
 
 本文基于 MRAG-Bench 展开研究，该数据集将多模态问答组织为“查询图像 + 问题文本 + 外部候选图像库”的任务形式，要求系统先检索与问题相关的视觉证据，再利用查询图像和证据图像完成多选题回答。围绕这一任务，本文设计了一个由三部分组成的多模态检索增强架构：第一部分是查询侧规划，用于根据查询图像、题干和选项生成面向证据召回的检索表达；第二部分是视觉证据检索与融合，用于在完整图像库中按不同检索维度召回候选图像，并将多路结果合并为固定长度的证据集合；第三部分是多模态终答生成，用于把查询图像、检索证据和问题文本共同输入视觉语言模型，输出最终选项。该架构面向 MRAG-Bench 中问题条件视觉证据召回的需求，能够将原始问答任务拆分为查询构造、证据组织和终答生成三个可分析环节。
 
-实验结果表明，完整图像库检索仍是 vision-centric mRAG 的主要瓶颈。CLIP 直接全库检索基线的整体准确率为 50.41\%，CLIP 召回后结合 MagicLens 重排为 50.33\%，MagicLens 直接全库检索为 47.97\%。本文提出的多维融合检索框架在 MRAG-Bench 全量测试集上达到 56.32\%，相较最强完整全库检索基线提升 5.91 个百分点，相较 MagicLens 直接检索提升 8.35 个百分点。与使用人工标注证据的参考设置 60.16\% 相比，本文框架仍存在进一步提升空间，但已经显著改善了非人工证据条件下的全库检索表现，说明查询侧规划、多路证据召回与列表融合能够有效缓解问题条件视觉证据召回困难。
+实验结果表明，完整图像库检索仍是 vision-centric mRAG 的主要瓶颈。CLIP 直接全库检索基线的整体准确率为 50.41\%，CLIP 召回后结合 MagicLens 重排为 50.33\%，MagicLens 直接全库检索为 47.97\%。本文初始多维融合检索框架在 MRAG-Bench 全量测试集上达到 56.32\%；进一步参数优化后，四维查询配置达到 57.43\%，相较最强完整全库检索基线提升 7.02 个百分点，相较 MagicLens 直接检索提升 9.46 个百分点。与使用人工标注证据的参考设置 60.16\% 相比，本文框架仍存在进一步提升空间，但已经显著改善了非人工证据条件下的全库检索表现，说明查询侧规划、多路证据召回与列表融合能够有效缓解问题条件视觉证据召回困难。
 
-{\small\noindent\textbf{关键词：}多模态检索增强生成；视觉证据召回；问题条件检索；多模态问答；证据可验证性\par}
+{\small\noindent\textbf{关键词：}多模态检索增强生成；视觉证据召回；问题条件检索；多模态问答\par}
 
 \clearpage
 \begin{center}
 {\zihao{3}\bfseries Abstract\par}
 \end{center}
 \addcontentsline{toc}{chapter}{Abstract}
-\noindent\hspace*{\parindent}In vision-centric multimodal retrieval-augmented generation (mRAG), a system must retrieve external visual evidence from an image corpus according to both a query image and a question. Unlike text-based retrieval augmentation, this task involves a three-way relation among the query image, the natural-language question, and candidate evidence images. The query image provides the object or scene to be explained, the question specifies the missing visual condition, and the external corpus provides possible supporting evidence. Therefore, the retrieval target is not merely a visually similar image, but an evidence image that can support the current question-understanding and answer-selection process.
+\noindent\hspace*{\parindent}In vision-centric multimodal retrieval-augmented generation (mRAG), a system must retrieve external visual evidence according to both a query image and a question. The goal is therefore not only to find visually similar images, but to find evidence images that support question understanding and answer selection.
 
-This thesis studies MRAG-Bench, where each task is organized as a query image, a question, and an external candidate image corpus. The system must first retrieve visual evidence related to the question and then answer a multiple-choice question using both the query image and the retrieved evidence images. For this task, this thesis designs a multimodal retrieval-augmented architecture with three components. The first component performs query-side planning, generating retrieval expressions from the query image, question, and choices. The second component retrieves and fuses visual evidence, searching the full image corpus along different retrieval dimensions and merging the returned lists into a fixed-size evidence set. The third component performs multimodal answer generation, feeding the query image, retrieved evidence, and question text into a vision-language model to produce the final option. This architecture decomposes MRAG-Bench into query construction, evidence organization, and answer generation.
+This thesis studies MRAG-Bench, where each task contains a query image, a question, and an external image corpus. To address this task, this thesis designs a three-stage retrieval-augmented architecture: query-side planning generates evidence-oriented retrieval expressions, visual evidence retrieval and fusion search the full corpus from multiple dimensions and merge the results, and a vision-language model produces the final multiple-choice answer from the query image, retrieved evidence, and question text.
 
-Experimental results show that full-corpus visual retrieval remains a key bottleneck in vision-centric mRAG. The CLIP direct full-corpus retrieval baseline reaches 50.41\% overall accuracy, CLIP retrieval followed by MagicLens reranking reaches 50.33\%, and MagicLens direct full-corpus retrieval reaches 47.97\%. The proposed multidimensional fusion retrieval framework reaches 56.32\% on the full MRAG-Bench test set, improving over the strongest full-corpus retrieval baseline by 5.91 percentage points and over MagicLens direct retrieval by 8.35 points. Compared with the 60.16\% reference setting using human-annotated evidence, the framework still leaves room for improvement, but it substantially improves full-corpus retrieval without manually provided evidence, showing the effectiveness of query-side planning, multi-route evidence retrieval, and list fusion.
+Experiments show that full-corpus visual retrieval remains a key bottleneck. CLIP direct retrieval reaches 50.41\%, CLIP retrieval followed by MagicLens reranking reaches 50.33\%, and MagicLens direct retrieval reaches 47.97\%. The initial multidimensional fusion framework reaches 56.32\% on MRAG-Bench; after parameter tuning, the four-dimension configuration reaches 57.43\%, improving over the strongest full-corpus baseline by 7.02 percentage points and over MagicLens direct retrieval by 9.46 points. These results show that query-side planning, multi-route evidence retrieval, and list fusion can effectively improve full-corpus visual evidence retrieval without manually provided evidence.
 
-{\small\noindent\textbf{Key words:} multimodal RAG; visual evidence retrieval; question-conditioned retrieval; multimodal question answering; evidence verifiability\par}
+{\small\noindent\textbf{Key words:} multimodal RAG; visual evidence retrieval; question-conditioned retrieval; multimodal question answering\par}
 
 \tableofcontents
 \clearpage
@@ -115,22 +176,23 @@ Experimental results show that full-corpus visual retrieval remains a key bottle
 \chapter*{本科期间主要研究成果}
 \addcontentsline{toc}{chapter}{本科期间主要研究成果}
 
-\section*{发表论文}
-\begin{enumerate}[leftmargin=2em]
-\item \textcolor{red!75!black}{\textbf{Ziyan Shi}}, Y Gu, H Cui, et al. From Machine Learning to Multimodal Models: The AI Revolution in Enzyme Engineering. \textit{BioDesign Research}, 2025. DOI: \href{https://doi.org/10.1016/j.bidere.2025.100044}{10.1016/j.bidere.2025.100044}. （SCI，影响因子 4.7，JCR Q1）
-\item Yuan S, Peng N, \textcolor{red!75!black}{\textbf{Shi Z}}, et al. Detection of algal tiny objects based on morphological features. \textit{Concurrency and Computation: Practice and Experience}, 2024:e8128. DOI: \href{https://www.semanticscholar.org/paper/cfffa8e8e1c916e32f03488e518ef1ee18937dd2}{10.1002/cpe.8128}. （SCI/SCIE，中科院 4 区，JCR Q2）
-\item S. Yuan, N. Peng, \textcolor{red!75!black}{\textbf{Z.Shi}}, Y. Gu and B. Sun. ``MAgic: A Morphable Attention Based Algal Tiny Object Detection Model,'' in \textit{2023 10th International Conference on Behavioural and Social Computing (BESC)}, Larnaca, Cyprus, 2023, pp.~1--8. DOI: \href{https://doi.org/10.1109/BESC59560.2023.10386562}{10.1109/BESC59560.2023.10386562}. （EI，IEEE）
-\end{enumerate}
+\zihao{-4}
+\researchheading{发表论文}
+\begin{researchitems}
+\item \textbf{Ziyan Shi}, Y Gu, H Cui, et al. From Machine Learning to Multimodal Models: The AI Revolution in Enzyme Engineering. \textit{BioDesign Research}, 2025. DOI: \href{https://doi.org/10.1016/j.bidere.2025.100044}{10.1016/j.bidere.2025.100044}. （SCI，影响因子 4.7，JCR Q1）
+\item Yuan S, Peng N, \textbf{Shi Z}, et al. Detection of algal tiny objects based on morphological features. \textit{Concurrency and Computation: Practice and Experience}, 2024:e8128. DOI: \href{https://www.semanticscholar.org/paper/cfffa8e8e1c916e32f03488e518ef1ee18937dd2}{10.1002/cpe.8128}. （SCI/SCIE，中科院 4 区，JCR Q2）
+\item S. Yuan, N. Peng, \textbf{Z. Shi}, Y. Gu and B. Sun. ``MAgic: A Morphable Attention Based Algal Tiny Object Detection Model,'' in \textit{2023 10th International Conference on Behavioural and Social Computing (BESC)}, Larnaca, Cyprus, 2023, pp.~1--8. DOI: \href{https://doi.org/10.1109/BESC59560.2023.10386562}{10.1109/BESC59560.2023.10386562}. （EI，IEEE）
+\end{researchitems}
 
-\section*{完成项目}
-\begin{enumerate}[leftmargin=2em]
+\researchheading{完成项目}
+\begin{researchitems}
 \item 参与基于 YOLOv8 的藻类微小目标检测研究，围绕形态学特征建模、注意力机制设计与数据集构建开展实验，形成 conference 与 journal 两条成果线。
 \item 参与酶工程方向的 AI for Science 研究，围绕酶功能预测、酶工程任务建模与多模态模型在生命科学中的应用开展文献调研与综述写作，形成 \textit{BioDesign Research} 论文成果。
 \item 参与酶学编号预测（EC number prediction）相关项目，面向分子表示、反应式建模与酶功能分类问题进行数据处理、模型实验与结果分析。
-\item 参与实验室自动化方向项目，基于 Opentrons 平台完成实验流程编排与自动化脚本编写，支持 PCR 等湿实验步骤的标准化执行。
 \item 参与脑启发计算方向项目，围绕 BrainPy 建模、神经形态计算平台使用与相关学术交流活动开展学习与实践。
 \item 参与基于 THz 的脑机接口（BCI）方向项目，围绕多模态信号整合、设备方案设计与算法分析开展前期研究与实验探索。
 \item 参与 iGEM Competition 与 iGEM Hackathon 相关项目，完成队伍协作、方案设计与竞赛实践。
-\end{enumerate}
+\item 参与国家自然科学基金面上项目“面向检索增强生成的零样本跨模态学习方法研究”。
+\end{researchitems}
 
 \end{document}

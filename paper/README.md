@@ -18,6 +18,33 @@
 - 旧的 `PROGRESS_AND_RESULTS.md` 当前并不在仓库里，不再作为索引入口。
 - 如果需要看整个项目而不是只看论文，请先读 `../doc/CURRENT_STATUS_2026-04.md`。
 
+## 生成 Word 文档
+
+论文 Word 版本由 `paper/main.tex` 和 `paper/content.tex` 生成，输出文件为：
+
+- `paper/main.docx`
+
+在仓库根目录执行：
+
+```bash
+cd /Users/szy/Downloads/mRAG
+python3 scripts/latex_to_nnu_docx.py paper/main.tex paper/main.docx
+```
+
+如果本地环境缺少 Python 依赖，先安装：
+
+```bash
+python3 -m pip install lxml python-docx pillow
+```
+
+生成后可以用下面的命令做轻量校验：
+
+```bash
+unzip -t paper/main.docx
+```
+
+如果校验输出 `No errors detected in compressed data of paper/main.docx.`，说明 Word 文件结构正常。
+
 ## 当前时间节点
 
 - 最迟于 `2026-04-17` 填写共享文档

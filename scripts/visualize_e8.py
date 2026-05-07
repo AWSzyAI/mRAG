@@ -2,15 +2,15 @@
 """Visualize E8 multi-dim MagicLens retrieval results.
 
 Generates:
-1) A 1x5 collage using per-dimension top-1 retrieval images.
-2) A 1x(1+5) collage with query image + fused final top-5 retrieval images.
+1) A pure-image 1x5 collage using per-dimension top-1 retrieval images.
+2) A pure-image 1x(1+5) collage with query image + fused final top-5 retrieval images.
+3) A pure-image dimension x rank grid. No labels are drawn inside the figures.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
-import textwrap
 from pathlib import Path
 from typing import Any
 
@@ -56,30 +56,22 @@ def load_or_placeholder(path: Path, label: str, tile_size: int) -> Image.Image:
 
 def draw_collage(
     images: list[Image.Image],
-    titles: list[str],
     output_path: Path,
-    header: str,
     tile_size: int = 240,
 ) -> None:
     cols = len(images)
-    gap = 16
-    pad = 20
-    title_h = 56
-    header_h = 44
+    gap = max(6, tile_size // 32)
+    pad = gap
     width = pad * 2 + cols * tile_size + (cols - 1) * gap
-    height = pad * 2 + header_h + title_h + tile_size
-    canvas = Image.new("RGB", (width, height), color=(250, 250, 250))
+    height = pad * 2 + tile_size
+    canvas = Image.new("RGB", (width, height), color=(255, 255, 255))
     draw = ImageDraw.Draw(canvas)
-    font = ImageFont.load_default()
 
-    draw.text((pad, pad), header, fill=(20, 20, 20), font=font)
-    y0 = pad + header_h
-    for i, (img, title) in enumerate(zip(images, titles)):
+    y0 = pad
+    for i, img in enumerate(images):
         x = pad + i * (tile_size + gap)
-        draw.rectangle((x - 1, y0 + title_h - 1, x + tile_size + 1, y0 + title_h + tile_size + 1), outline=(200, 200, 200))
-        wrapped = textwrap.fill(title, width=28)
-        draw.multiline_text((x, y0), wrapped, fill=(30, 30, 30), font=font, spacing=2)
-        canvas.paste(img, (x, y0 + title_h))
+        canvas.paste(img, (x, y0))
+        draw.rectangle((x - 1, y0 - 1, x + tile_size, y0 + tile_size), outline=(210, 210, 210), width=1)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     canvas.save(output_path)
@@ -98,20 +90,12 @@ def draw_dim_topk_grid(
     if rows == 0 or cols == 0:
         raise ValueError("No per-dimension retrieval rows to render.")
 
-    gap = 10
-    left_w = 280
-    top_h = 30
-    pad = 16
-    width = pad * 2 + left_w + cols * tile_size + (cols - 1) * gap
-    height = pad * 2 + top_h + rows * tile_size + (rows - 1) * gap
-    canvas = Image.new("RGB", (width, height), color=(252, 252, 252))
+    gap = max(5, tile_size // 40)
+    pad = gap
+    width = pad * 2 + cols * tile_size + (cols - 1) * gap
+    height = pad * 2 + rows * tile_size + (rows - 1) * gap
+    canvas = Image.new("RGB", (width, height), color=(255, 255, 255))
     draw = ImageDraw.Draw(canvas)
-    font = ImageFont.load_default()
-
-    # Header ranks.
-    for c in range(cols):
-        x = pad + left_w + c * (tile_size + gap)
-        draw.text((x + 4, pad), f"rank {c + 1}", fill=(20, 20, 20), font=font)
 
     # Duplicate hit highlighting by image id.
     id_counts: dict[str, int] = {}
@@ -123,13 +107,10 @@ def draw_dim_topk_grid(
 
     missing: list[str] = []
     for r, call in enumerate(dim_calls):
-        y = pad + top_h + r * (tile_size + gap)
-        q = str(call.get("query", ""))
-        q_short = textwrap.shorten(q, width=60, placeholder="...")
-        draw.multiline_text((pad, y + 4), f"dim {r + 1}\n{q_short}", fill=(30, 30, 30), font=font, spacing=3)
+        y = pad + r * (tile_size + gap)
         topk = call.get("top_k", [])
         for c in range(cols):
-            x = pad + left_w + c * (tile_size + gap)
+            x = pad + c * (tile_size + gap)
             if c < len(topk):
                 row = topk[c]
                 p = resolve_image_path(str(row.get("path", "")), repo_root, allow_local_fallback)
@@ -139,11 +120,8 @@ def draw_dim_topk_grid(
                 canvas.paste(img, (x, y))
                 rid = str(row.get("id", ""))
                 dup = id_counts.get(rid, 0)
-                border = (220, 40, 40) if dup > 1 else (180, 180, 180)
-                draw.rectangle((x - 1, y - 1, x + tile_size + 1, y + tile_size + 1), outline=border, width=2)
-                draw.text((x + 4, y + tile_size - 16), f"{row.get('score', 0):.3f}", fill=(0, 0, 0), font=font)
-                if dup > 1:
-                    draw.text((x + tile_size - 56, y + 4), f"dup x{dup}", fill=(220, 40, 40), font=font)
+                border = (210, 70, 70) if dup > 1 else (210, 210, 210)
+                draw.rectangle((x - 1, y - 1, x + tile_size, y + tile_size), outline=border, width=1)
             else:
                 draw.rectangle((x, y, x + tile_size, y + tile_size), outline=(220, 220, 220))
 
@@ -172,16 +150,10 @@ def render_for_sample(
     per_dim_imgs = [
         load_or_placeholder(p, label=f"dim{i + 1}", tile_size=tile_size) for i, p in enumerate(per_dim_top1_paths)
     ]
-    per_dim_titles = []
-    for i, (q, p) in enumerate(zip(dim_queries, per_dim_top1_paths), start=1):
-        per_dim_titles.append(f"dim{i} top1\n{p.name}\nq: {q[:80]}")
-
     dim_collage_path = output_dir / f"qs_{qs_id}_dim_top1_1x5.png"
     draw_collage(
         images=per_dim_imgs,
-        titles=per_dim_titles,
         output_path=dim_collage_path,
-        header=f"qs_id={qs_id} per-dimension top1 (1x{len(per_dim_imgs)})",
         tile_size=tile_size,
     )
 
@@ -202,13 +174,10 @@ def render_for_sample(
     final_imgs = [load_or_placeholder(p, label=f"top{i + 1}", tile_size=tile_size) for i, p in enumerate(final_paths)]
 
     merged_images = [query_img] + final_imgs
-    merged_titles = ["query_image"] + [f"top{i + 1}\n{p.name}" for i, p in enumerate(final_paths)]
     final_collage_path = output_dir / f"qs_{qs_id}_query_plus_final_top5_1x6.png"
     draw_collage(
         images=merged_images,
-        titles=merged_titles,
         output_path=final_collage_path,
-        header=f"qs_id={qs_id} query + fused final top5 (1x{len(merged_images)})",
         tile_size=tile_size,
     )
 

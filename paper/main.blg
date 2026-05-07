@@ -1,51 +1,58 @@
 This is BibTeX, Version 0.99e (TeX Live 2026)
 Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
 The top-level auxiliary file: main.aux
-The style file: unsrtnat.bst
+The style file: gbt7714-numerical.bst
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Reallocated singl_function (elt_size=4) to 150 items from 100.
+Reallocated wiz_functions (elt_size=4) to 6000 items from 3000.
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Reallocated wiz_functions (elt_size=4) to 9000 items from 6000.
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Reallocated glb_str_ptr (elt_size=4) to 20 items from 10.
+Reallocated global_strs (elt_size=200001) to 20 items from 10.
+Reallocated glb_str_end (elt_size=4) to 20 items from 10.
+Reallocated singl_function (elt_size=4) to 100 items from 50.
 Database file #1: ../doc/开题报告LaTeX/ref_ordered.bib
-Warning--empty journal in lewis2020rag
-Warning--empty journal in anthropic2024mcp
-Warning--empty journal in anthropic2024claudecode
-Warning--empty journal in langchain2024skills
 You've used 39 entries,
-            2481 wiz_defined-function locations,
-            775 strings with 13559 characters,
-and the built_in function-call counts, 17753 in all, are:
-= -- 1401
-> -- 1201
-< -- 23
-+ -- 445
-- -- 364
-* -- 1385
-:= -- 2903
-add.period$ -- 161
+            6859 wiz_defined-function locations,
+            1448 strings with 18649 characters,
+and the built_in function-call counts, 3922489 in all, are:
+= -- 413371
+> -- 42481
+< -- 311500
++ -- 16887
+- -- 7208
+* -- 15357
+:= -- 66350
+add.period$ -- 159
 call.type$ -- 39
-change.case$ -- 78
-chr.to.int$ -- 36
-cite$ -- 43
-duplicate$ -- 882
-empty$ -- 1439
-format.name$ -- 412
-if$ -- 3776
-int.to.chr$ -- 4
+change.case$ -- 352
+chr.to.int$ -- 276683
+cite$ -- 39
+duplicate$ -- 716478
+empty$ -- 2871
+format.name$ -- 1229
+if$ -- 768340
+int.to.chr$ -- 5342
 int.to.str$ -- 40
-missing$ -- 39
-newline$ -- 246
+missing$ -- 0
+newline$ -- 267
 num.names$ -- 117
-pop$ -- 358
+pop$ -- 74291
 preamble$ -- 1
-purify$ -- 39
+purify$ -- 422
 quote$ -- 0
-skip$ -- 571
+skip$ -- 98523
 stack$ -- 0
-substring$ -- 563
-swap$ -- 212
-text.length$ -- 11
+substring$ -- 597259
+swap$ -- 495710
+text.length$ -- 872
 text.prefix$ -- 0
 top$ -- 0
-type$ -- 273
-warning$ -- 4
-while$ -- 115
+type$ -- 446
+warning$ -- 0
+while$ -- 9275
 width$ -- 0
-write$ -- 572
-(There were 4 warnings)
+write$ -- 580

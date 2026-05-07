@@ -1,0 +1,11 @@
+{
+  "tag": "P08_dimtopk_k4",
+  "prefix": "p08_dimtopk_k4",
+  "sweep": "dim_top_k",
+  "n_dims": 5,
+  "dim_top_k": 4,
+  "final_top_k": 5,
+  "fusion_strategy": "rrf",
+  "samples_per_scenario": 10,
+  "max_samples": 0
+}

@@ -683,7 +683,7 @@ def run_benchmark(args: argparse.Namespace) -> None:
             seen_qs_ids = set()
 
     out_mode = "a" if args.resume_from_existing else "w"
-    dims_out = open(dims_path, out_mode, encoding="utf-8") if dims_path else None
+    dims_out = open(dims_path, out_mode, encoding="utf-8", buffering=1) if dims_path else None
     trace_out = open(trace_path, out_mode, encoding="utf-8", buffering=1) if trace_path else None
 
     try:

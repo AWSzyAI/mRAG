@@ -1,0 +1,29 @@
+{
+  "dataset_name": "uclanlp/MRAG-Bench",
+  "processed": 90,
+  "correct": 53,
+  "accuracy": 58.89,
+  "n_dims": 4,
+  "dim_top_k": 5,
+  "final_top_k": 5,
+  "fusion_strategy": "rrf",
+  "dim_generator_type": "gemma4_local",
+  "dim_generator_model": "google/gemma-4-E2B-it",
+  "final_answerer": "llava",
+  "magiclens_jax_platform": "cpu",
+  "dim_gen_failures": 0,
+  "avg_dim_gen_time_sec": 0.0,
+  "avg_retrieval_time_sec": 0.0,
+  "avg_final_answer_time_sec": 0.0,
+  "by_scenario_accuracy": {
+    "Scope": 30.0,
+    "Obstruction": 60.0,
+    "Temporal": 70.0,
+    "Deformation": 60.0,
+    "Biological": 80.0,
+    "Angle": 50.0,
+    "Partial": 70.0,
+    "Incomplete": 40.0,
+    "Others": 70.0
+  }
+}

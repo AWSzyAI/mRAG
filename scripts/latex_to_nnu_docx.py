@@ -64,15 +64,30 @@ def set_paragraph_format(paragraph, first_line=True, align=WD_ALIGN_PARAGRAPH.JU
     paragraph.alignment = align
 
 
-def set_style_font(style, size_pt: float, bold=False):
+def set_style_font(style, size_pt: float, bold=False, italic=False, font_name: str | None = None):
+    font_name = font_name or WESTERN_FONT
     font = style.font
-    font.name = WESTERN_FONT
+    font.name = font_name
     font.size = Pt(size_pt)
     font.bold = bold
+    font.italic = italic
     font.color.rgb = RGBColor(0, 0, 0)
-    style._element.rPr.rFonts.set(qn("w:eastAsia"), CHINESE_FONT)
-    style._element.rPr.rFonts.set(qn("w:ascii"), WESTERN_FONT)
-    style._element.rPr.rFonts.set(qn("w:hAnsi"), WESTERN_FONT)
+    if style._element.rPr is None:
+        style._element.append(OxmlElement("w:rPr"))
+    r_fonts = style._element.rPr.rFonts
+    if r_fonts is None:
+        r_fonts = OxmlElement("w:rFonts")
+        style._element.rPr.append(r_fonts)
+    r_fonts.set(qn("w:eastAsia"), CHINESE_FONT)
+    r_fonts.set(qn("w:ascii"), font_name)
+    r_fonts.set(qn("w:hAnsi"), font_name)
+
+
+def get_or_create_paragraph_style(styles, name: str):
+    try:
+        return styles[name]
+    except KeyError:
+        return styles.add_style(name, WD_STYLE_TYPE.PARAGRAPH)
 
 
 def clear_style_color(style):
@@ -226,6 +241,7 @@ def latex_to_text(text: str, citation_map: dict[str, str] | None = None) -> str:
     citation_map = citation_map or {}
     text = text.replace("\n", " ")
     text = re.sub(r"(?<!\\)%.*", "", text)
+    text = re.sub(r"\\zihao\{[^{}]*\}", "", text)
     text = re.sub(r"\\hspace\*?\{[^{}]*\}", "", text)
     text = re.sub(r"\\vspace\{[^{}]*\}", "", text)
     text = re.sub(r"\\begin\{[^{}]*\}(?:\[[^\]]*\])?(?:\{[^{}]*\})?", "", text)
@@ -304,6 +320,87 @@ def add_text_with_citations(paragraph, text: str, size=12, bold=False):
         set_run_font(run, size, bold=bold)
 
 
+def max_word_id(root, tag: str, attr_name: str) -> int:
+    values = []
+    for el in root.findall(qn(tag)):
+        value = el.get(qn(attr_name))
+        if value and value.isdigit():
+            values.append(int(value))
+    return max(values or [0])
+
+
+def ensure_reference_numbering(document) -> str:
+    existing = getattr(document, "_reference_num_id", None)
+    if existing is not None:
+        return existing
+
+    numbering = document.part.numbering_part.element
+    abstract_id = str(max_word_id(numbering, "w:abstractNum", "w:abstractNumId") + 1)
+    num_id = str(max_word_id(numbering, "w:num", "w:numId") + 1)
+
+    abstract = OxmlElement("w:abstractNum")
+    abstract.set(qn("w:abstractNumId"), abstract_id)
+    multi_level_type = OxmlElement("w:multiLevelType")
+    multi_level_type.set(qn("w:val"), "singleLevel")
+    abstract.append(multi_level_type)
+
+    lvl = OxmlElement("w:lvl")
+    lvl.set(qn("w:ilvl"), "0")
+    start = OxmlElement("w:start")
+    start.set(qn("w:val"), "1")
+    num_fmt = OxmlElement("w:numFmt")
+    num_fmt.set(qn("w:val"), "decimal")
+    lvl_text = OxmlElement("w:lvlText")
+    lvl_text.set(qn("w:val"), "[%1]")
+    suffix = OxmlElement("w:suff")
+    suffix.set(qn("w:val"), "space")
+    lvl_jc = OxmlElement("w:lvlJc")
+    lvl_jc.set(qn("w:val"), "left")
+    lvl_ppr = OxmlElement("w:pPr")
+    lvl_ind = OxmlElement("w:ind")
+    lvl_ind.set(qn("w:left"), "0")
+    lvl_ind.set(qn("w:hanging"), "0")
+    lvl_ppr.append(lvl_ind)
+    lvl_rpr = OxmlElement("w:rPr")
+    lvl_fonts = OxmlElement("w:rFonts")
+    lvl_fonts.set(qn("w:ascii"), WESTERN_FONT)
+    lvl_fonts.set(qn("w:hAnsi"), WESTERN_FONT)
+    lvl_fonts.set(qn("w:eastAsia"), CHINESE_FONT)
+    lvl_size = OxmlElement("w:sz")
+    lvl_size.set(qn("w:val"), "24")
+    lvl_rpr.append(lvl_fonts)
+    lvl_rpr.append(lvl_size)
+    for child in (start, num_fmt, lvl_text, suffix, lvl_jc, lvl_ppr, lvl_rpr):
+        lvl.append(child)
+    abstract.append(lvl)
+    numbering.append(abstract)
+
+    num = OxmlElement("w:num")
+    num.set(qn("w:numId"), num_id)
+    abstract_ref = OxmlElement("w:abstractNumId")
+    abstract_ref.set(qn("w:val"), abstract_id)
+    num.append(abstract_ref)
+    numbering.append(num)
+
+    document._reference_num_id = num_id
+    return num_id
+
+
+def add_reference_paragraph(document, ref: str, num_id: str):
+    p = document.add_paragraph()
+    set_paragraph_format(p, first_line=False, align=WD_ALIGN_PARAGRAPH.JUSTIFY)
+    pPr = p._p.get_or_add_pPr()
+    numPr = OxmlElement("w:numPr")
+    ilvl = OxmlElement("w:ilvl")
+    ilvl.set(qn("w:val"), "0")
+    num = OxmlElement("w:numId")
+    num.set(qn("w:val"), num_id)
+    numPr.append(ilvl)
+    numPr.append(num)
+    pPr.append(numPr)
+    add_text_with_citations(p, ref, 12)
+
+
 def add_body_paragraph(document, text: str, citation_map: dict[str, str]):
     text = latex_to_text(text, citation_map)
     if not text:
@@ -311,6 +408,18 @@ def add_body_paragraph(document, text: str, citation_map: dict[str, str]):
     p = document.add_paragraph()
     set_paragraph_format(p)
     add_text_with_citations(p, text, 12)
+
+
+def add_subsubsection_heading(document, title: str):
+    title = latex_to_text(title)
+    if not title:
+        return
+    p = document.add_paragraph()
+    set_paragraph_format(p, first_line=False, align=WD_ALIGN_PARAGRAPH.LEFT)
+    p.paragraph_format.space_before = Pt(6)
+    p.paragraph_format.space_after = Pt(3)
+    r = p.add_run(title)
+    set_run_font(r, 12, bold=True)
 
 
 def add_center_heading(document, title: str, page_break=False):
@@ -492,6 +601,24 @@ def render_formula_image(formula: str, state: dict) -> Path | None:
     state["formula_image"] = state.get("formula_image", 0) + 1
     out = asset_path(f"formula_{state['formula_image']:03d}.png")
     try:
+        aligned = re.search(r"\\begin\{aligned\}(.*?)\\end\{aligned\}", clean, re.S)
+        if aligned:
+            lines = []
+            for line in re.split(r"\\\\", aligned.group(1)):
+                line = line.replace("&", "").strip()
+                if line:
+                    lines.append(line)
+            fig = plt.figure(figsize=(9.0, max(1.15, 0.48 * len(lines))), dpi=240)
+            fig.patch.set_alpha(0)
+            ax = fig.add_axes([0, 0, 1, 1])
+            ax.axis("off")
+            y0 = 0.5 + (len(lines) - 1) * 0.16
+            for idx, line in enumerate(lines):
+                ax.text(0.5, y0 - idx * 0.32, f"${line}$", ha="center", va="center", fontsize=25, color="black")
+            fig.savefig(out, transparent=True, bbox_inches="tight", pad_inches=0.03)
+            plt.close(fig)
+            return out
+
         fig = plt.figure(figsize=(9.0, 1.15), dpi=240)
         fig.patch.set_alpha(0)
         ax = fig.add_axes([0, 0, 1, 1])
@@ -711,6 +838,24 @@ def add_enumerate(document, block: str, citation_map: dict[str, str]):
         add_text_with_citations(p, f"{idx}. {text}", 12)
 
 
+def add_research_items(document, block: str, citation_map: dict[str, str]):
+    items = re.split(r"\\item", block)
+    for idx, item in enumerate(items[1:], 1):
+        item = re.sub(r"\\end\{researchitems\}", "", item)
+        text = latex_to_text(item, citation_map)
+        if not text:
+            continue
+        p = document.add_paragraph()
+        set_paragraph_format(p, first_line=False, align=WD_ALIGN_PARAGRAPH.JUSTIFY)
+        p.paragraph_format.left_indent = Cm(0.74)
+        p.paragraph_format.first_line_indent = Cm(-0.74)
+        p.paragraph_format.line_spacing_rule = WD_LINE_SPACING.EXACTLY
+        p.paragraph_format.line_spacing = Pt(17.5)
+        p.paragraph_format.space_before = Pt(0)
+        p.paragraph_format.space_after = Pt(0)
+        add_text_with_citations(p, f"[{idx}] {text}", 12)
+
+
 def build_citation_map(bbl_path: Path) -> dict[str, str]:
     if not bbl_path.exists():
         return {}
@@ -806,7 +951,7 @@ def read_bibliography(bbl_path: Path) -> list[str]:
 
 def parse_blocks(text: str):
     pattern = re.compile(
-        r"\\begin\{(?:figure|table|equation|enumerate|center|verbatim)\}.*?\\end\{(?:figure|table|equation|enumerate|center|verbatim)\}|\\\[.*?\\\]",
+        r"\\begin\{(?:figure|table|equation|enumerate|researchitems|center|verbatim)\}.*?\\end\{(?:figure|table|equation|enumerate|researchitems|center|verbatim)\}|\\\[.*?\\\]",
         re.S,
     )
     pos = 0
@@ -843,10 +988,9 @@ def process_text_chunk(document, chunk: str, state: dict, citation_map: dict[str
             flush()
             refs = state.get("references", [])
             add_chapter(document, None, "参考文献")
-            for i, ref in enumerate(refs, 1):
-                p = document.add_paragraph()
-                set_paragraph_format(p, first_line=False, align=WD_ALIGN_PARAGRAPH.JUSTIFY)
-                add_text_with_citations(p, f"[{i}] {ref}", 12)
+            ref_num_id = ensure_reference_numbering(document)
+            for ref in refs:
+                add_reference_paragraph(document, ref, ref_num_id)
             continue
         m = re.match(r"\\chapter\{(.+?)\}", stripped)
         if m:
@@ -880,11 +1024,28 @@ def process_text_chunk(document, chunk: str, state: dict, citation_map: dict[str
             r = p.add_run(latex_to_text(m.group(1)))
             set_run_font(r, 14, bold=True)
             continue
+        m = re.match(r"\\researchheading\{(.+?)\}", stripped)
+        if m:
+            flush()
+            p = document.add_paragraph()
+            set_paragraph_format(p, first_line=False, align=WD_ALIGN_PARAGRAPH.LEFT)
+            p.paragraph_format.space_before = Pt(6)
+            p.paragraph_format.space_after = Pt(3)
+            r = p.add_run(latex_to_text(m.group(1)) + "：")
+            set_run_font(r, 12, bold=True)
+            continue
         m = re.match(r"\\subsection\{(.+?)\}", stripped)
         if m:
             flush()
             state["subsection"] += 1
+            state["subsubsection"] = 0
             add_section_heading(document, 3, f"{state['chapter']}.{state['section']}.{state['subsection']}", latex_to_text(m.group(1)))
+            continue
+        m = re.match(r"\\subsubsection\{(.+?)\}", stripped)
+        if m:
+            flush()
+            state["subsubsection"] += 1
+            add_subsubsection_heading(document, m.group(1))
             continue
         if stripped.startswith(("\\addcontentsline", "\\clearpage", "\\cleardoublepage", "\\par")):
             flush()
@@ -898,6 +1059,7 @@ def process_latex(document, text: str, image_dir: Path, citation_map: dict[str, 
         "chapter": 0,
         "section": 0,
         "subsection": 0,
+        "subsubsection": 0,
         "figure": 0,
         "table": 0,
         "equation": 0,
@@ -916,6 +1078,8 @@ def process_latex(document, text: str, image_dir: Path, citation_map: dict[str, 
             add_equation(document, block, state)
         elif kind == "enumerate":
             add_enumerate(document, block, citation_map)
+        elif kind == "researchitems":
+            add_research_items(document, block, citation_map)
         elif kind == "center":
             add_center_block(document, block, state, citation_map)
         elif kind == "verbatim":
@@ -933,6 +1097,13 @@ def configure_document(document: Document):
     for name, size in [("Heading 1", 16), ("Heading 2", 14), ("Heading 3", 12)]:
         set_style_font(styles[name], size, bold=True)
         clear_style_color(styles[name])
+    for name, size in [("TOC 1", 12), ("TOC 2", 12), ("TOC 3", 12)]:
+        style = get_or_create_paragraph_style(styles, name)
+        set_style_font(style, size, italic=False, font_name=CHINESE_FONT)
+        style.paragraph_format.line_spacing_rule = WD_LINE_SPACING.MULTIPLE
+        style.paragraph_format.line_spacing = 1.5
+        style.paragraph_format.space_before = Pt(0)
+        style.paragraph_format.space_after = Pt(0)
     if "List Number" in styles:
         set_style_font(styles["List Number"], 12)
     for style_name in ("CaptionNNU",):
@@ -1014,6 +1185,85 @@ def merge_source_styles(files: dict[str, bytes], source_files: dict[str, bytes])
             target_root.append(deepcopy(style))
             target_ids.add(style_id)
     files["word/styles.xml"] = etree_to_bytes(target_root)
+
+
+def merge_numbering_for_elements(files: dict[str, bytes], source_files: dict[str, bytes], elements):
+    if "word/numbering.xml" not in source_files:
+        return
+    if "word/numbering.xml" not in files:
+        files["word/numbering.xml"] = source_files["word/numbering.xml"]
+        return
+
+    source_num_ids = sorted({
+        node.get(qn("w:val"))
+        for el in elements
+        for node in el.xpath(".//w:numPr/w:numId", namespaces={"w": W_NS})
+        if node.get(qn("w:val"))
+    })
+    if not source_num_ids:
+        return
+
+    target_root = etree_from_bytes(files["word/numbering.xml"])
+    source_root = etree_from_bytes(source_files["word/numbering.xml"])
+    target_num_ids = {
+        n.get(qn("w:numId"))
+        for n in target_root.xpath("//w:num", namespaces={"w": W_NS})
+        if n.get(qn("w:numId"))
+    }
+    target_abs_ids = {
+        n.get(qn("w:abstractNumId"))
+        for n in target_root.xpath("//w:abstractNum", namespaces={"w": W_NS})
+        if n.get(qn("w:abstractNumId"))
+    }
+    next_num_id = max([int(x) for x in target_num_ids if x.isdigit()] or [0]) + 1
+    next_abs_id = max([int(x) for x in target_abs_ids if x.isdigit()] or [0]) + 1
+
+    source_nums = {
+        n.get(qn("w:numId")): n
+        for n in source_root.xpath("//w:num", namespaces={"w": W_NS})
+        if n.get(qn("w:numId"))
+    }
+    source_abs = {
+        n.get(qn("w:abstractNumId")): n
+        for n in source_root.xpath("//w:abstractNum", namespaces={"w": W_NS})
+        if n.get(qn("w:abstractNumId"))
+    }
+    num_id_map: dict[str, str] = {}
+    abs_id_map: dict[str, str] = {}
+
+    for old_num_id in source_num_ids:
+        source_num = source_nums.get(old_num_id)
+        if source_num is None:
+            continue
+        old_abs_ref = source_num.find(qn("w:abstractNumId"))
+        old_abs_id = old_abs_ref.get(qn("w:val")) if old_abs_ref is not None else None
+        if old_abs_id and old_abs_id not in abs_id_map:
+            new_abs_id = str(next_abs_id)
+            next_abs_id += 1
+            abs_id_map[old_abs_id] = new_abs_id
+            source_abstract = source_abs.get(old_abs_id)
+            if source_abstract is not None:
+                copied_abs = deepcopy(source_abstract)
+                copied_abs.set(qn("w:abstractNumId"), new_abs_id)
+                target_root.append(copied_abs)
+
+        new_num_id = str(next_num_id)
+        next_num_id += 1
+        num_id_map[old_num_id] = new_num_id
+        copied_num = deepcopy(source_num)
+        copied_num.set(qn("w:numId"), new_num_id)
+        copied_abs_ref = copied_num.find(qn("w:abstractNumId"))
+        if copied_abs_ref is not None and old_abs_id in abs_id_map:
+            copied_abs_ref.set(qn("w:val"), abs_id_map[old_abs_id])
+        target_root.append(copied_num)
+
+    for el in elements:
+        for node in el.xpath(".//w:numPr/w:numId", namespaces={"w": W_NS}):
+            old_num_id = node.get(qn("w:val"))
+            if old_num_id in num_id_map:
+                node.set(qn("w:val"), num_id_map[old_num_id])
+
+    files["word/numbering.xml"] = etree_to_bytes(target_root)
 
 
 def etree_from_bytes(data: bytes):
@@ -1242,6 +1492,7 @@ def build_output_from_template(template_docx: Path, generated_docx: Path, output
     )
     remove_null_relationships(target_rels)
     merge_source_styles(files, generated_files)
+    merge_numbering_for_elements(files, generated_files, generated_after_cover)
 
     for child in list(target_body)[len(target_cover):]:
         target_body.remove(child)
@@ -1260,6 +1511,126 @@ def build_output_from_template(template_docx: Path, generated_docx: Path, output
             for name, data in files.items():
                 out_zip.writestr(name, data)
         shutil.move(str(tmp_path), output_docx)
+    finally:
+        if tmp_path.exists():
+            tmp_path.unlink()
+
+
+def normalize_r_fonts(r_pr):
+    if r_pr is None:
+        return
+    r_fonts = r_pr.find(qn("w:rFonts"))
+    if r_fonts is None:
+        r_fonts = etree.Element(qn("w:rFonts"))
+        r_pr.insert(0, r_fonts)
+    for attr in ("asciiTheme", "hAnsiTheme", "eastAsiaTheme", "cstheme"):
+        r_fonts.attrib.pop(qn(f"w:{attr}"), None)
+    r_fonts.set(qn("w:ascii"), WESTERN_FONT)
+    r_fonts.set(qn("w:hAnsi"), WESTERN_FONT)
+    r_fonts.set(qn("w:eastAsia"), CHINESE_FONT)
+    r_fonts.set(qn("w:cs"), WESTERN_FONT)
+
+
+def force_not_italic(r_pr):
+    if r_pr is None:
+        return
+    for tag in ("w:i", "w:iCs"):
+        node = r_pr.find(qn(tag))
+        if node is None:
+            node = etree.Element(qn(tag))
+            r_pr.append(node)
+        node.set(qn("w:val"), "0")
+
+
+def sanitize_docx_fonts(docx_path: Path):
+    """Remove template font leftovers so Word only sees SimSun and Times New Roman."""
+    with ZipFile(docx_path, "r") as in_zip:
+        files = {name: in_zip.read(name) for name in in_zip.namelist()}
+
+    xml_parts = [
+        name for name in files
+        if name.startswith("word/")
+        and name.endswith(".xml")
+        and not name.startswith("word/media/")
+        and name != "word/fontTable.xml"
+    ]
+    for name in xml_parts:
+        try:
+            root = etree_from_bytes(files[name])
+        except Exception:
+            continue
+        changed = False
+        for r_pr in root.xpath(".//w:rPr", namespaces={"w": W_NS}):
+            normalize_r_fonts(r_pr)
+            changed = True
+        for style in root.xpath(".//w:style", namespaces={"w": W_NS}):
+            style_id = style.get(qn("w:styleId")) or ""
+            style_name = ""
+            name_el = style.find(qn("w:name"))
+            if name_el is not None:
+                style_name = name_el.get(qn("w:val")) or ""
+            if (
+                style_id in {"TOC1", "TOC2", "TOC3", "TOCHeading"}
+                or style_name in {"TOC 1", "TOC 2", "TOC 3", "TOC Heading", "Hyperlink"}
+                or "Hyperlink" in style_id
+            ):
+                r_pr = style.find(qn("w:rPr"))
+                if r_pr is None:
+                    r_pr = etree.Element(qn("w:rPr"))
+                    style.append(r_pr)
+                normalize_r_fonts(r_pr)
+                force_not_italic(r_pr)
+                changed = True
+        if changed:
+            files[name] = etree_to_bytes(root)
+
+    font_table = etree.Element(qn("w:fonts"), nsmap={"w": W_NS})
+    for font_name, family in ((WESTERN_FONT, "roman"), (CHINESE_FONT, "auto")):
+        font = etree.Element(qn("w:font"))
+        font.set(qn("w:name"), font_name)
+        charset = etree.Element(qn("w:charset"))
+        charset.set(qn("w:val"), "86" if font_name == CHINESE_FONT else "00")
+        family_el = etree.Element(qn("w:family"))
+        family_el.set(qn("w:val"), family)
+        pitch = etree.Element(qn("w:pitch"))
+        pitch.set(qn("w:val"), "default" if font_name == CHINESE_FONT else "variable")
+        font.extend([charset, family_el, pitch])
+        font_table.append(font)
+    files["word/fontTable.xml"] = etree_to_bytes(font_table)
+
+    relationships = etree.Element(f"{{{REL_NS}}}Relationships")
+    files["word/_rels/fontTable.xml.rels"] = etree_to_bytes(relationships)
+
+    for name in list(files):
+        if name.startswith("word/fonts/"):
+            del files[name]
+
+    if "[Content_Types].xml" in files:
+        content_types = etree_from_bytes(files["[Content_Types].xml"])
+        for el in list(content_types):
+            part_name = el.get("PartName") or ""
+            if part_name.startswith("/word/fonts/"):
+                content_types.remove(el)
+        files["[Content_Types].xml"] = etree_to_bytes(content_types)
+
+    if "word/settings.xml" in files:
+        settings = files["word/settings.xml"].decode("utf-8", errors="ignore")
+        for old in ("Calibri", "Cambria Math", "Cambria"):
+            settings = settings.replace(old, WESTERN_FONT)
+        files["word/settings.xml"] = settings.encode("utf-8")
+
+    if "word/theme/theme1.xml" in files:
+        theme = files["word/theme/theme1.xml"].decode("utf-8", errors="ignore")
+        theme = re.sub(r'typeface="[^"]*"', f'typeface="{WESTERN_FONT}"', theme)
+        files["word/theme/theme1.xml"] = theme.encode("utf-8")
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".docx") as tmp:
+        tmp_path = Path(tmp.name)
+    try:
+        with ZipFile(tmp_path, "w", ZIP_DEFLATED) as out_zip:
+            for name, data in files.items():
+                out_zip.writestr(name, data)
+        shutil.move(str(tmp_path), docx_path)
     finally:
         if tmp_path.exists():
             tmp_path.unlink()
@@ -1319,6 +1690,7 @@ def main():
             build_output_from_template(cover_docx, generated_path, args.output_docx)
         else:
             shutil.move(str(generated_path), args.output_docx)
+        sanitize_docx_fonts(args.output_docx)
     finally:
         if generated_path.exists():
             generated_path.unlink()
