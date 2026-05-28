@@ -1,0 +1,707 @@
+{
+  "split": "entity_test",
+  "total_sampled": 100,
+  "random_seed": 42,
+  "samples": [
+    {
+      "sample_id": 0,
+      "line_idx": 3407,
+      "data_id": "infoseek_test_00003407",
+      "image_id": "oven_05490510",
+      "question": "Which city or region does this building locate in?"
+    },
+    {
+      "sample_id": 1,
+      "line_idx": 13112,
+      "data_id": "infoseek_test_00013112",
+      "image_id": "oven_05524276",
+      "question": "Who designed this bridge?"
+    },
+    {
+      "sample_id": 2,
+      "line_idx": 13912,
+      "data_id": "infoseek_test_00013912",
+      "image_id": "oven_05506007",
+      "question": "Which historic county does this town belong to?"
+    },
+    {
+      "sample_id": 3,
+      "line_idx": 15622,
+      "data_id": "infoseek_test_00015622",
+      "image_id": "oven_05650413",
+      "question": "What is the maximum height of this animal in centimetre?"
+    },
+    {
+      "sample_id": 4,
+      "line_idx": 16663,
+      "data_id": "infoseek_test_00016663",
+      "image_id": "oven_05801673",
+      "question": "What country does this village belong to?"
+    },
+    {
+      "sample_id": 5,
+      "line_idx": 16829,
+      "data_id": "infoseek_test_00016829",
+      "image_id": "oven_05603713",
+      "question": "What is the closest parent taxonomy of this bird?"
+    },
+    {
+      "sample_id": 6,
+      "line_idx": 22780,
+      "data_id": "infoseek_test_00022780",
+      "image_id": "oven_05470594",
+      "question": "What product does this organization produce?"
+    },
+    {
+      "sample_id": 7,
+      "line_idx": 24025,
+      "data_id": "infoseek_test_00024025",
+      "image_id": "oven_05532600",
+      "question": "Who occupies this building?"
+    },
+    {
+      "sample_id": 8,
+      "line_idx": 29327,
+      "data_id": "infoseek_test_00029327",
+      "image_id": "oven_05518476",
+      "question": "What is the immediately prior item that this activity follows in a series?"
+    },
+    {
+      "sample_id": 9,
+      "line_idx": 34701,
+      "data_id": "infoseek_test_00034701",
+      "image_id": "oven_05645055",
+      "question": "What is the closest upper taxonomy of this bird?"
+    },
+    {
+      "sample_id": 10,
+      "line_idx": 36466,
+      "data_id": "infoseek_test_00036466",
+      "image_id": "oven_05606801",
+      "question": "What is the length of the wingspan in centimetre of this bird?"
+    },
+    {
+      "sample_id": 11,
+      "line_idx": 37435,
+      "data_id": "infoseek_test_00037435",
+      "image_id": "oven_05534812",
+      "question": "which mountain range is this mountain belong to?"
+    },
+    {
+      "sample_id": 12,
+      "line_idx": 41313,
+      "data_id": "infoseek_test_00041313",
+      "image_id": "oven_05528366",
+      "question": "What is the topographic isolation of this place in kilometre?"
+    },
+    {
+      "sample_id": 13,
+      "line_idx": 41833,
+      "data_id": "infoseek_test_00041833",
+      "image_id": "oven_05733169",
+      "question": "Who is the discoverer or inventor of this item?"
+    },
+    {
+      "sample_id": 14,
+      "line_idx": 45580,
+      "data_id": "infoseek_test_00045580",
+      "image_id": "oven_05647227",
+      "question": "What is the maximum height of a male of this animal in centimetre?"
+    },
+    {
+      "sample_id": 15,
+      "line_idx": 48625,
+      "data_id": "infoseek_test_00048625",
+      "image_id": "oven_05571863",
+      "question": "What is the weight of a female of this bird in gram?"
+    },
+    {
+      "sample_id": 16,
+      "line_idx": 49123,
+      "data_id": "infoseek_test_00049123",
+      "image_id": "oven_05523544",
+      "question": "What is this lake named after?"
+    },
+    {
+      "sample_id": 17,
+      "line_idx": 50707,
+      "data_id": "infoseek_test_00050707",
+      "image_id": "oven_05473010",
+      "question": "Who is the manufacturer of this vehicle?"
+    },
+    {
+      "sample_id": 18,
+      "line_idx": 52953,
+      "data_id": "infoseek_test_00052953",
+      "image_id": "oven_05701757",
+      "question": "Who is the discoverer or inventor of this object?"
+    },
+    {
+      "sample_id": 19,
+      "line_idx": 53587,
+      "data_id": "infoseek_test_00053587",
+      "image_id": "oven_05525154",
+      "question": "What place inflows lake?"
+    },
+    {
+      "sample_id": 20,
+      "line_idx": 53736,
+      "data_id": "infoseek_test_00053736",
+      "image_id": "oven_05532966",
+      "question": "What is the height of this building in terms of metre above sea level?"
+    },
+    {
+      "sample_id": 21,
+      "line_idx": 58369,
+      "data_id": "infoseek_test_00058369",
+      "image_id": "oven_05532644",
+      "question": "In which year was this building first mentioned in writing?"
+    },
+    {
+      "sample_id": 22,
+      "line_idx": 65444,
+      "data_id": "infoseek_test_00065444",
+      "image_id": "oven_05511525",
+      "question": "Which city or region does this building locate in?"
+    },
+    {
+      "sample_id": 23,
+      "line_idx": 73158,
+      "data_id": "infoseek_test_00073158",
+      "image_id": "oven_05475814",
+      "question": "What is the location of this building?"
+    },
+    {
+      "sample_id": 24,
+      "line_idx": 81516,
+      "data_id": "infoseek_test_00081516",
+      "image_id": "oven_05648017",
+      "question": "What is the maximum weight of a female of this animal in kilogram?"
+    },
+    {
+      "sample_id": 25,
+      "line_idx": 83707,
+      "data_id": "infoseek_test_00083707",
+      "image_id": "oven_05491946",
+      "question": "What water body does the river in the image drain to?"
+    },
+    {
+      "sample_id": 26,
+      "line_idx": 85277,
+      "data_id": "infoseek_test_00085277",
+      "image_id": "oven_05499476",
+      "question": "Who is the owner of this building?"
+    },
+    {
+      "sample_id": 27,
+      "line_idx": 85669,
+      "data_id": "infoseek_test_00085669",
+      "image_id": "oven_05606613",
+      "question": "What is the basionym of this plant?"
+    },
+    {
+      "sample_id": 28,
+      "line_idx": 89725,
+      "data_id": "infoseek_test_00089725",
+      "image_id": "oven_05482724",
+      "question": "What is the architectural style of this building?"
+    },
+    {
+      "sample_id": 29,
+      "line_idx": 100814,
+      "data_id": "infoseek_test_00100814",
+      "image_id": "oven_05207204",
+      "question": "How many levels does this building have?"
+    },
+    {
+      "sample_id": 30,
+      "line_idx": 104248,
+      "data_id": "infoseek_test_00104248",
+      "image_id": "oven_05079182",
+      "question": "What is the location of this building?"
+    },
+    {
+      "sample_id": 31,
+      "line_idx": 109842,
+      "data_id": "infoseek_test_00109842",
+      "image_id": "oven_05178381",
+      "question": "In which year did this facility officially open?"
+    },
+    {
+      "sample_id": 32,
+      "line_idx": 110615,
+      "data_id": "infoseek_test_00110615",
+      "image_id": "oven_05075891",
+      "question": "Who designed this bridge?"
+    },
+    {
+      "sample_id": 33,
+      "line_idx": 112886,
+      "data_id": "infoseek_test_00112886",
+      "image_id": "oven_05256822",
+      "question": "What is the closest parent taxonomy of this plant?"
+    },
+    {
+      "sample_id": 34,
+      "line_idx": 114629,
+      "data_id": "infoseek_test_00114629",
+      "image_id": "oven_00003513",
+      "question": "What is the length of the wingspan in metre of this aircraft?"
+    },
+    {
+      "sample_id": 35,
+      "line_idx": 115141,
+      "data_id": "infoseek_test_00115141",
+      "image_id": "oven_05282048",
+      "question": "What is the basionym of this plant?"
+    },
+    {
+      "sample_id": 36,
+      "line_idx": 115574,
+      "data_id": "infoseek_test_00115574",
+      "image_id": "oven_05162463",
+      "question": "What is the height of this building in metre?"
+    },
+    {
+      "sample_id": 37,
+      "line_idx": 117026,
+      "data_id": "infoseek_test_00117026",
+      "image_id": "oven_04930557",
+      "question": "In which year did this aircraft come into service?"
+    },
+    {
+      "sample_id": 38,
+      "line_idx": 119484,
+      "data_id": "infoseek_test_00119484",
+      "image_id": "oven_05204111",
+      "question": "Who are the structure engineers of this building?"
+    },
+    {
+      "sample_id": 39,
+      "line_idx": 120087,
+      "data_id": "infoseek_test_00120087",
+      "image_id": "oven_05196441",
+      "question": "Who or what maintains this building?"
+    },
+    {
+      "sample_id": 40,
+      "line_idx": 121981,
+      "data_id": "infoseek_test_00121981",
+      "image_id": "oven_05451287",
+      "question": "for the animal in the image, what do they commonly eat?"
+    },
+    {
+      "sample_id": 41,
+      "line_idx": 122049,
+      "data_id": "infoseek_test_00122049",
+      "image_id": "oven_05453465",
+      "question": "In which year was this material invented or discovered?"
+    },
+    {
+      "sample_id": 42,
+      "line_idx": 128351,
+      "data_id": "infoseek_test_00128351",
+      "image_id": "oven_05273634",
+      "question": "What is the closest upper taxonomy of this animal?"
+    },
+    {
+      "sample_id": 43,
+      "line_idx": 128393,
+      "data_id": "infoseek_test_00128393",
+      "image_id": "oven_05183880",
+      "question": "Who designed this building?"
+    },
+    {
+      "sample_id": 44,
+      "line_idx": 138685,
+      "data_id": "infoseek_test_00138685",
+      "image_id": "oven_05182792",
+      "question": "Who occupies this building?"
+    },
+    {
+      "sample_id": 45,
+      "line_idx": 139973,
+      "data_id": "infoseek_test_00139973",
+      "image_id": "oven_05144298",
+      "question": "Who is the founder of the building in the image?"
+    },
+    {
+      "sample_id": 46,
+      "line_idx": 140373,
+      "data_id": "infoseek_test_00140373",
+      "image_id": "oven_05207967",
+      "question": "Which historic county does this building belong to?"
+    },
+    {
+      "sample_id": 47,
+      "line_idx": 141530,
+      "data_id": "infoseek_test_00141530",
+      "image_id": "oven_05453941",
+      "question": "Who is the discoverer or inventor of this object?"
+    },
+    {
+      "sample_id": 48,
+      "line_idx": 144194,
+      "data_id": "infoseek_test_00144194",
+      "image_id": "oven_05468581",
+      "question": "What is the pH value of this food?"
+    },
+    {
+      "sample_id": 49,
+      "line_idx": 145684,
+      "data_id": "infoseek_test_00145684",
+      "image_id": "oven_05215200",
+      "question": "What country does this lake belong to?"
+    },
+    {
+      "sample_id": 50,
+      "line_idx": 145738,
+      "data_id": "infoseek_test_00145738",
+      "image_id": "oven_05207637",
+      "question": "who/what operates this building?"
+    },
+    {
+      "sample_id": 51,
+      "line_idx": 145852,
+      "data_id": "infoseek_test_00145852",
+      "image_id": "oven_05175218",
+      "question": "Which (geo)physical feature is the island located in or on?"
+    },
+    {
+      "sample_id": 52,
+      "line_idx": 151722,
+      "data_id": "infoseek_test_00151722",
+      "image_id": "oven_05115780",
+      "question": "What equipment or engine is used by this item to provide power?"
+    },
+    {
+      "sample_id": 53,
+      "line_idx": 153709,
+      "data_id": "infoseek_test_00153709",
+      "image_id": "oven_05317082",
+      "question": "What is the closest parent taxonomy of this fish?"
+    },
+    {
+      "sample_id": 54,
+      "line_idx": 165388,
+      "data_id": "infoseek_test_00165388",
+      "image_id": "oven_05193370",
+      "question": "What is the height of this building in terms of metre above sea level?"
+    },
+    {
+      "sample_id": 55,
+      "line_idx": 170017,
+      "data_id": "infoseek_test_00170017",
+      "image_id": "oven_05150022",
+      "question": "Which body of water is this place located in or next to?"
+    },
+    {
+      "sample_id": 56,
+      "line_idx": 176472,
+      "data_id": "infoseek_test_00176472",
+      "image_id": "oven_05092543",
+      "question": "What is the closest parent taxonomy of this plant?"
+    },
+    {
+      "sample_id": 57,
+      "line_idx": 178389,
+      "data_id": "infoseek_test_00178389",
+      "image_id": "oven_05145719",
+      "question": "Who commissioned this building?"
+    },
+    {
+      "sample_id": 58,
+      "line_idx": 180331,
+      "data_id": "infoseek_test_00180331",
+      "image_id": "oven_05152151",
+      "question": "Who are the structure engineers of this building?"
+    },
+    {
+      "sample_id": 59,
+      "line_idx": 186264,
+      "data_id": "infoseek_test_00186264",
+      "image_id": "oven_05085193",
+      "question": "Which historic county does this place belong to?"
+    },
+    {
+      "sample_id": 60,
+      "line_idx": 188208,
+      "data_id": "infoseek_test_00188208",
+      "image_id": "oven_05132082",
+      "question": "What is the height of this aircraft in metre?"
+    },
+    {
+      "sample_id": 61,
+      "line_idx": 189600,
+      "data_id": "infoseek_test_00189600",
+      "image_id": "oven_05179760",
+      "question": "What is the area in acre occupied by this park?"
+    },
+    {
+      "sample_id": 62,
+      "line_idx": 191277,
+      "data_id": "infoseek_test_00191277",
+      "image_id": "oven_05450086",
+      "question": "Who is the owner of this park?"
+    },
+    {
+      "sample_id": 63,
+      "line_idx": 194081,
+      "data_id": "infoseek_test_00194081",
+      "image_id": "oven_05389124",
+      "question": "What is the closest parent taxonomy of this plant?"
+    },
+    {
+      "sample_id": 64,
+      "line_idx": 198461,
+      "data_id": "infoseek_test_00198461",
+      "image_id": "oven_05148998",
+      "question": "What is the basin country to the lake?"
+    },
+    {
+      "sample_id": 65,
+      "line_idx": 198943,
+      "data_id": "infoseek_test_00198943",
+      "image_id": "oven_05394617",
+      "question": "What is this food named after?"
+    },
+    {
+      "sample_id": 66,
+      "line_idx": 199191,
+      "data_id": "infoseek_test_00199191",
+      "image_id": "oven_05146793",
+      "question": "What country does this mountain belong to?"
+    },
+    {
+      "sample_id": 67,
+      "line_idx": 199295,
+      "data_id": "infoseek_test_00199295",
+      "image_id": "oven_05082916",
+      "question": "In which year did this building officially open?"
+    },
+    {
+      "sample_id": 68,
+      "line_idx": 210325,
+      "data_id": "infoseek_test_00210325",
+      "image_id": "oven_05149990",
+      "question": "What is the location of this building?"
+    },
+    {
+      "sample_id": 69,
+      "line_idx": 219949,
+      "data_id": "infoseek_test_00219949",
+      "image_id": "oven_05174756",
+      "question": "Which body of water is this building located in or next to?"
+    },
+    {
+      "sample_id": 70,
+      "line_idx": 221208,
+      "data_id": "infoseek_test_00221208",
+      "image_id": "oven_05086457",
+      "question": "Which body of water is this island located in or next to?"
+    },
+    {
+      "sample_id": 71,
+      "line_idx": 221571,
+      "data_id": "infoseek_test_00221571",
+      "image_id": "oven_05121237",
+      "question": "In which year was this item invented or discovered?"
+    },
+    {
+      "sample_id": 72,
+      "line_idx": 235514,
+      "data_id": "infoseek_test_00235514",
+      "image_id": "oven_05131575",
+      "question": "Who is the developer of this aircraft?"
+    },
+    {
+      "sample_id": 73,
+      "line_idx": 237717,
+      "data_id": "infoseek_test_00237717",
+      "image_id": "oven_05304462",
+      "question": "What is the closest parent taxonomy of this plant?"
+    },
+    {
+      "sample_id": 74,
+      "line_idx": 240870,
+      "data_id": "infoseek_test_00240870",
+      "image_id": "oven_05082847",
+      "question": "Which city or region does this building locate in?"
+    },
+    {
+      "sample_id": 75,
+      "line_idx": 242357,
+      "data_id": "infoseek_test_00242357",
+      "image_id": "oven_05137919",
+      "question": "What is the architectural style of this building?"
+    },
+    {
+      "sample_id": 76,
+      "line_idx": 264951,
+      "data_id": "infoseek_test_00264951",
+      "image_id": "oven_05147336",
+      "question": "Which city or region does this facility locate in?"
+    },
+    {
+      "sample_id": 77,
+      "line_idx": 280043,
+      "data_id": "infoseek_test_00280043",
+      "image_id": "oven_05158597",
+      "question": "What is the height of this building in metre?"
+    },
+    {
+      "sample_id": 78,
+      "line_idx": 281137,
+      "data_id": "infoseek_test_00281137",
+      "image_id": "oven_05149946",
+      "question": "Which continent does this place belong to?"
+    },
+    {
+      "sample_id": 79,
+      "line_idx": 285706,
+      "data_id": "infoseek_test_00285706",
+      "image_id": "oven_05198663",
+      "question": "Who is the owner of this building?"
+    },
+    {
+      "sample_id": 80,
+      "line_idx": 285929,
+      "data_id": "infoseek_test_00285929",
+      "image_id": "oven_05166609",
+      "question": "What is the height of this bridge in metre?"
+    },
+    {
+      "sample_id": 81,
+      "line_idx": 289428,
+      "data_id": "infoseek_test_00289428",
+      "image_id": "oven_05204012",
+      "question": "Which city or region does this activity locate in?"
+    },
+    {
+      "sample_id": 82,
+      "line_idx": 292002,
+      "data_id": "infoseek_test_00292002",
+      "image_id": "oven_05081213",
+      "question": "What place is the lake outflow to?"
+    },
+    {
+      "sample_id": 83,
+      "line_idx": 294254,
+      "data_id": "infoseek_test_00294254",
+      "image_id": "oven_05277387",
+      "question": "Where is this bird native to?"
+    },
+    {
+      "sample_id": 84,
+      "line_idx": 297365,
+      "data_id": "infoseek_test_00297365",
+      "image_id": "oven_05215317",
+      "question": "Which culture is associated with this building?"
+    },
+    {
+      "sample_id": 85,
+      "line_idx": 302698,
+      "data_id": "infoseek_test_00302698",
+      "image_id": "oven_05164864",
+      "question": "Who led the anthropological investigation at this building?"
+    },
+    {
+      "sample_id": 86,
+      "line_idx": 308944,
+      "data_id": "infoseek_test_00308944",
+      "image_id": "oven_05169703",
+      "question": "What is this building dedicated to?"
+    },
+    {
+      "sample_id": 87,
+      "line_idx": 309588,
+      "data_id": "infoseek_test_00309588",
+      "image_id": "oven_05318248",
+      "question": "What is the closest parent taxonomy of this bird?"
+    },
+    {
+      "sample_id": 88,
+      "line_idx": 315631,
+      "data_id": "infoseek_test_00315631",
+      "image_id": "oven_05199691",
+      "question": "What is the clearance of the bridge at its highest point?"
+    },
+    {
+      "sample_id": 89,
+      "line_idx": 316526,
+      "data_id": "infoseek_test_00316526",
+      "image_id": "oven_05216502",
+      "question": "Which street is this building located at?"
+    },
+    {
+      "sample_id": 90,
+      "line_idx": 319360,
+      "data_id": "infoseek_test_00319360",
+      "image_id": "oven_05073501",
+      "question": "Who is the owner of this place?"
+    },
+    {
+      "sample_id": 91,
+      "line_idx": 324282,
+      "data_id": "infoseek_test_00324282",
+      "image_id": "oven_05183874",
+      "question": "What is the maximum capacity of this building?"
+    },
+    {
+      "sample_id": 92,
+      "line_idx": 329588,
+      "data_id": "infoseek_test_00329588",
+      "image_id": "oven_05132061",
+      "question": "Who is the manufacturer of this aircraft?"
+    },
+    {
+      "sample_id": 93,
+      "line_idx": 332911,
+      "data_id": "infoseek_test_00332911",
+      "image_id": "oven_05329336",
+      "question": "What is the closest upper taxonomy of this animal?"
+    },
+    {
+      "sample_id": 94,
+      "line_idx": 333281,
+      "data_id": "infoseek_test_00333281",
+      "image_id": "oven_05210200",
+      "question": "What is the location of this bridge?"
+    },
+    {
+      "sample_id": 95,
+      "line_idx": 335243,
+      "data_id": "infoseek_test_00335243",
+      "image_id": "oven_05133324",
+      "question": "What is the immediately prior item that this vehicle follows in a series?"
+    },
+    {
+      "sample_id": 96,
+      "line_idx": 335544,
+      "data_id": "infoseek_test_00335544",
+      "image_id": "oven_05133804",
+      "question": "What is the brand of this vehicle?"
+    },
+    {
+      "sample_id": 97,
+      "line_idx": 339757,
+      "data_id": "infoseek_test_00339757",
+      "image_id": "oven_05201735",
+      "question": "who/what operates this building?"
+    },
+    {
+      "sample_id": 98,
+      "line_idx": 340726,
+      "data_id": "infoseek_test_00340726",
+      "image_id": "oven_00000393",
+      "question": "What equipment or engine is used by this aircraft to provide power?"
+    },
+    {
+      "sample_id": 99,
+      "line_idx": 346692,
+      "data_id": "infoseek_test_00346692",
+      "image_id": "oven_05143945",
+      "question": "Which protected area is this place usually located in?"
+    }
+  ]
+}

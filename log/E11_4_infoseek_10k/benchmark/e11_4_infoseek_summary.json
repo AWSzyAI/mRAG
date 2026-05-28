@@ -1,0 +1,14 @@
+{
+  "experiment": "E11_4_InfoSeek_10K",
+  "dataset": "entity_test",
+  "total_samples": 10000,
+  "completed": 10000,
+  "failed": 0,
+  "exact_match_count": 0,
+  "fuzzy_match_count": 0,
+  "exact_match_rate": 0.0,
+  "fuzzy_match_rate": 0.0,
+  "total_time_sec": 0.04847097396850586,
+  "avg_time_per_sample": 4.847097396850586e-06,
+  "random_seed": 42
+}

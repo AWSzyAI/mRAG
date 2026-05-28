@@ -1,6 +1,8 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help sync sync-code pull pull-role cmd alias config role-local role-remote role-show bpe clean
+SHELL := /bin/bash
+
+.PHONY: help sync sync-code sync-env env-smoke pull pull-role cmd alias config role-local role-remote role-show bpe clean
 
 PROJECT_ROOT ?= $(CURDIR)
 MODULE_DIR := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
@@ -14,8 +16,8 @@ MODULE_NAME ?= $(notdir $(MODULE_DIR))
 # └─────────────────┘                          └──────────────────┘
 # =====================================================================
 
-# SYNC_HOST ?= nnu
-SYNC_HOST ?= AB
+SYNC_HOST ?= nnu
+# SYNC_HOST ?= AB
 # SYNC_HOST ?= featurize
 # SYNC_HOST ?= AC
 # SYNC_HOST ?= zhichuanyun
@@ -40,7 +42,19 @@ BPE_NAME ?= bpe_simple_vocab_16e6.txt.gz
 
 CONDA_BIN ?= conda
 CMD ?=
-KNOWN_TARGETS := help sync sync-code pull pull-role cmd alias config role-local role-remote role-show bpe clean
+ENV_NAME ?= llava
+LOCAL_CONDA_ENV ?= $(ENV_NAME)
+LOCAL_CONDA_ENV_PATH ?=
+ENV_REMOTE_PATH ?= $(CONDA_ENV)
+ENV_ARCHIVE_NAME ?= mrag_$(ENV_NAME)_conda_pack.tar.gz
+ENV_LOCAL_TMP ?= /tmp/mrag_env_sync
+ENV_REMOTE_TMP ?= /tmp/mrag_env_sync
+ENV_REPLACE ?= 0
+ENV_SYNC_DEPS ?= 1
+ENV_CODE_DEPS ?= github/LLaVA-NeXT github/magiclens github/scenic
+ENV_SMOKE_IMPORTS ?= torch transformers jax flax PIL llava inference scenic
+ENV_SYNC_SCRIPT ?= $(PROJECT_ROOT)/infra/sync_conda_env.sh
+KNOWN_TARGETS := help sync sync-code sync-env env-smoke pull pull-role cmd alias config role-local role-remote role-show bpe clean
 CMD_GOALS := $(filter-out $(KNOWN_TARGETS),$(MAKECMDGOALS))
 
 ifneq ($(filter cmd,$(MAKECMDGOALS)),)
@@ -56,6 +70,12 @@ endif
 endif
 
 ifneq ($(filter sync,$(MAKECMDGOALS)),)
+ifneq ($(strip $(CMD_GOALS)),)
+$(eval $(CMD_GOALS):;@:)
+endif
+endif
+
+ifneq ($(filter sync-env,$(MAKECMDGOALS)),)
 ifneq ($(strip $(CMD_GOALS)),)
 $(eval $(CMD_GOALS):;@:)
 endif
@@ -92,6 +112,9 @@ help:
 	echo "  make help                Show this menu"; \
 	echo "  make sync                Preview sync local -> remote"; \
 	echo "  make sync y              Apply sync local -> remote"; \
+	echo "  make sync-env            Preview local conda env -> remote"; \
+	echo "  make sync-env y          Pack local conda env and install on remote"; \
+	echo "  make env-smoke           Smoke-test remote conda env imports"; \
 	echo "  make pull                Preview pull using $(PULL_DEFAULT_LIST)"; \
 	echo "  make pull <name>         Preview pull using <name> or <name>.txt"; \
 	echo "  make pull y              Apply pull using $(PULL_DEFAULT_LIST)"; \
@@ -267,6 +290,65 @@ sync-code:
 		echo "[WARN] Failed directory deletions: $$delete_warn_count (directory still non-empty on remote)"; \
 		grep '^cannot delete non-empty directory:' "$$tmp_log" | sed -n '1,5p' | sed 's/^/[WARN] /'; \
 	fi
+
+sync-env:
+	$(ensure_remote_sync_config)
+	@set -e; \
+	env_args='$(CMD_GOALS)'; \
+	apply_mode=0; \
+	if [ "$(APPLY)" = "1" ] || [ "$(Y)" = "1" ]; then apply_mode=1; fi; \
+	for arg in $$env_args; do \
+		case "$$arg" in \
+			y|yes|--yes|-y) apply_mode=1 ;; \
+		esac; \
+	done; \
+	echo "Local conda env: $(LOCAL_CONDA_ENV)"; \
+	if [ -n "$(LOCAL_CONDA_ENV_PATH)" ]; then echo "Local env path:  $(LOCAL_CONDA_ENV_PATH)"; fi; \
+	echo "Remote host:     $(SSH_HOST)"; \
+	echo "Remote project:  $(REMOTE_DIR)"; \
+	echo "Remote env path: $(ENV_REMOTE_PATH)"; \
+	echo "Archive:         $(ENV_ARCHIVE_NAME)"; \
+	echo "Sync code deps:  $(ENV_SYNC_DEPS) ($(ENV_CODE_DEPS))"; \
+	if [ "$$apply_mode" -eq 0 ]; then \
+		echo ""; \
+		echo "Mode: PREVIEW (no archive is created or uploaded)"; \
+		echo "Apply with: make sync-env y"; \
+		echo "Replace an existing remote env with: make sync-env y ENV_REPLACE=1"; \
+		exit 0; \
+	fi; \
+	if [ ! -x "$(ENV_SYNC_SCRIPT)" ]; then \
+		echo "Missing or not executable: $(ENV_SYNC_SCRIPT)"; \
+		exit 2; \
+	fi; \
+	SYNC_HOST='$(SSH_HOST)' \
+	REMOTE_DIR='$(REMOTE_DIR)' \
+	REMOTE_CONDA_ENV='$(ENV_REMOTE_PATH)' \
+	LOCAL_CONDA_ENV='$(LOCAL_CONDA_ENV)' \
+	LOCAL_CONDA_ENV_PATH='$(LOCAL_CONDA_ENV_PATH)' \
+	ARCHIVE_NAME='$(ENV_ARCHIVE_NAME)' \
+	LOCAL_TMP='$(ENV_LOCAL_TMP)' \
+	REMOTE_TMP='$(ENV_REMOTE_TMP)' \
+	ENV_REPLACE='$(ENV_REPLACE)' \
+	ENV_SYNC_DEPS='$(ENV_SYNC_DEPS)' \
+	ENV_CODE_DEPS='$(ENV_CODE_DEPS)' \
+	ENV_SMOKE_IMPORTS='$(ENV_SMOKE_IMPORTS)' \
+	ENV_PACK_IGNORE_MISSING='$(ENV_PACK_IGNORE_MISSING)' \
+	bash "$(ENV_SYNC_SCRIPT)"
+
+env-smoke:
+	$(ensure_remote_sync_config)
+	@set -e; \
+	if [ ! -x "$(ENV_SYNC_SCRIPT)" ]; then \
+		echo "Missing or not executable: $(ENV_SYNC_SCRIPT)"; \
+		exit 2; \
+	fi; \
+	SYNC_HOST='$(SSH_HOST)' \
+	REMOTE_DIR='$(REMOTE_DIR)' \
+	REMOTE_CONDA_ENV='$(ENV_REMOTE_PATH)' \
+	ENV_CODE_DEPS='$(ENV_CODE_DEPS)' \
+	ENV_SMOKE_IMPORTS='$(ENV_SMOKE_IMPORTS)' \
+	ENV_SMOKE_ONLY=1 \
+	bash "$(ENV_SYNC_SCRIPT)"
 
 pull:
 	$(ensure_remote_sync_config)

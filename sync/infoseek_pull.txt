@@ -1,0 +1,22 @@
+# InfoSeek 数据元数据拉取列表
+# 使用: make pull infoseek y
+
+# 核心文档和配置
+data/infoseek/README.md
+
+# 任务数据（Entity - 实体识别任务）
+data/infoseek/Entity/*.jsonl
+
+# 评测数据（Human - 人工评测基准）
+data/infoseek/Human/*.jsonl
+
+# 查询定义（Query - 问题模板，无image_id）
+data/infoseek/Query/*.jsonl
+
+# 筛图日志和统计
+data/infoseek/images/select_infoseek_images.log
+data/infoseek/images/oven_images_index.csv
+
+# 脚本文件
+data/infoseek/scripts/*.sh
+data/infoseek/scripts/*.py

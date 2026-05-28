@@ -36,6 +36,7 @@ from pathlib import Path
 ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
+sys.path.append(str(ROOT_DIR / "github" / "scenic"))
 
 
 def _preload_dotenv_before_jax() -> None:

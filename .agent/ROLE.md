@@ -1,10 +1,10 @@
 # ROLE
 
 - role_kind: main-dev
-- node: szy@M5
-- sync_host: AB
-- remote_dir: /public/home/hzh/mRAG
-- generated_at_utc: 2026-04-16T10:21:23Z
+- node: szy@AW
+- sync_host: nnu
+- remote_dir: /home/user/code/mRAG
+- generated_at_utc: 2026-05-22T12:01:40Z
 
 ## Notes
 - main-dev: primary edit and git source of truth

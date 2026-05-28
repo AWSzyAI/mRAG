@@ -1,0 +1,13 @@
+{
+  "split": "entity_test",
+  "sample_size": 100,
+  "requested_n_dims": 3,
+  "backend_requested": "auto",
+  "used_backends": {
+    "heuristic": 100
+  },
+  "fallback_count": 100,
+  "errors": 0,
+  "total_elapsed_sec": 0.008,
+  "output_jsonl": "log/infoseek_open_ended_multidim_100.jsonl"
+}

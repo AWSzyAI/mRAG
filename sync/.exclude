@@ -6,7 +6,11 @@ __pycache__
 .DS_Store
 
 .venv/
-data/***
+# data 目录: 仅排除图片和大型缓存，允许配置和元数据
+data/infoseek/images/**.jpg
+data/infoseek/images/**.png
+data/infoseek/images/**.jpeg
+data/infoseek/images/**.JPG
 data/image_corpus
 github/magiclens/data/***
 github/magiclens/models/***
@@ -14,7 +18,11 @@ github/MRAG-Bench/.cache/
 
 github/MRAG-Bench/results/***
 github/MRAG-Bench/llava_one_vision_gt_rag_results.jsonl
+!github/scenic/scenic/projects/baselines/clip/download.py
+!github/scenic/scenic/projects/baselines/clip/model.py
+!github/scenic/scenic/projects/baselines/clip/tokenizer.py
 github/scenic/***
+!.offline_wheels
 
 paper/***
 log/***

@@ -1,10 +1,10 @@
-# Sync profiles used by module/Makefile.
+# Sync profiles used by sync/Makefile.
 # Select one host via:
 #   SYNC_HOST ?= AB
 
 Host nnu
   REMOTE_DIR ?= /home/user/code/mRAG
-  CONDA_ENV ?= /home/user/env/envs/py310
+  CONDA_ENV ?= /home/user/env/envs/llava
 
 Host Ocean-NAT
   REMOTE_DIR ?= /public/home/hzh/mRAG

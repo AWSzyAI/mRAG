@@ -1,0 +1,25 @@
+name: llava
+channels:
+  - defaults
+  - pytorch
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+    - transformers>=4.30
+    - tensorflow>=2.12
+    - datasets
+    - sentencepiece
+    - ftfy
+    - regex
+    - safetensors
+    - accelerate
+    - einops
+    - tokenizers
+    - torchvision
+    - pillow
+    - tqdm
+    - PyYAML
+    - psutil
+    - scipy
+    - scikit-learn

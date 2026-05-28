@@ -1,3 +1,3 @@
 PROJECT_ROOT := $(CURDIR)
 
-include module/Makefile
+include sync/Makefile

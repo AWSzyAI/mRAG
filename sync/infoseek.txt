@@ -1,0 +1,28 @@
+# InfoSeek 数据元数据拉取列表
+# 使用: make pull infoseek y
+
+# 核心文档
+data/infoseek/README.md
+
+# 任务数据（Entity - 实体识别任务）
+data/infoseek/Entity/infoseek_test.jsonl
+data/infoseek/Entity/infoseek_train.jsonl
+data/infoseek/Entity/infoseek_val.jsonl
+
+# 评测数据（Human - 人工评测基准）
+data/infoseek/Human/infoseek_human.jsonl
+
+# 查询定义（Query - 问题模板）
+data/infoseek/Query/infoseek_train_withkb.jsonl
+data/infoseek/Query/infoseek_val_withkb.jsonl
+
+# 筛图脚本（保留，生成和验证图片清单用）
+data/infoseek/scripts/select_infoseek_images.py
+data/infoseek/scripts/check_infoseek_image_coverage.py
+data/infoseek/scripts/download_oven_full.sh
+data/infoseek/scripts/merge_oven_images.py
+
+# 筛图日志和索引（重要，显示当前筛图进度）
+data/infoseek/images/select_infoseek_images.log
+data/infoseek/images/oven_images_index.csv
+

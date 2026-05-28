@@ -174,10 +174,11 @@ git clone https://github.com/google-research/scenic.git
 cd scenic
 pip install .
 pip install -r scenic/projects/baselines/clip/requirements.txt
-pip install --upgrade "jax[cuda12_pip]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
 pip install ftfy regex tqdm clip-anytorch
-pip uninstall -y jax jaxlib jax-cuda12-plugin jax-cuda12-pjrt
-pip install -U "jax[cuda12]"
+
+# 如果当前环境还要跑 torch，不建议用 "jax[cuda12]"，它会升级 pip CUDA/cuDNN
+# 组件，可能破坏 torch 对 nvidia-cudnn-cu12 的精确版本约束。
+pip install -U "jax[cuda12-local]"
 
 
 

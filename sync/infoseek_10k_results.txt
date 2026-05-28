@@ -1,0 +1,12 @@
+# InfoSeek 10K sampling + benchmark artifacts.
+# Usage:
+#   make pull infoseek_10k_results
+#   make pull infoseek_10k_results y
+
+log/E11_4_infoseek_10k/REPORT.txt
+log/E11_4_infoseek_10k/sampling/sample_indices.json
+log/E11_4_infoseek_10k/sampling/sample_metadata.json
+log/E11_4_infoseek_10k/sampling/samples.jsonl
+log/E11_4_infoseek_10k/sampling/summary.json
+log/E11_4_infoseek_10k/benchmark/e11_4_infoseek_results.jsonl
+log/E11_4_infoseek_10k/benchmark/e11_4_infoseek_summary.json

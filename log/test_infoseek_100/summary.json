@@ -1,0 +1,13 @@
+{
+  "experiment": "E11_4_InfoSeek_10K",
+  "dataset": "entity_test",
+  "total_in_split": 347980,
+  "sampled_count": 100,
+  "random_seed": 42,
+  "output_directory": "log/test_infoseek_100",
+  "files_generated": [
+    "sample_indices.json",
+    "sample_metadata.json",
+    "samples.jsonl"
+  ]
+}

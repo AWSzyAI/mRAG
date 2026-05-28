@@ -1,0 +1,24 @@
+E11_4 InfoSeek 10K 运行报告
+================================================
+
+配置:
+  数据集: entity_test
+  采样大小: 10000
+  随机种子: 42
+  输出目录: log/E11_4_infoseek_10k
+
+阶段 1 - 采样:
+  采样列表: log/E11_4_infoseek_10k/sampling/sample_indices.json
+  样本元数据: log/E11_4_infoseek_10k/sampling/sample_metadata.json
+  样本 JSONL: log/E11_4_infoseek_10k/sampling/samples.jsonl
+
+阶段 2 - Benchmark:
+  结果 JSONL: log/E11_4_infoseek_10k/benchmark/e11_4_infoseek_results.jsonl
+  摘要: log/E11_4_infoseek_10k/benchmark/e11_4_infoseek_summary.json
+
+关键文件:
+  - 按样本查看: tail -5 log/E11_4_infoseek_10k/benchmark/e11_4_infoseek_results.jsonl
+  - 查看统计: cat log/E11_4_infoseek_10k/benchmark/e11_4_infoseek_summary.json
+  - 样本列表: head -20 log/E11_4_infoseek_10k/sampling/samples.jsonl
+
+================================================

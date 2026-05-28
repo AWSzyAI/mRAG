@@ -1,0 +1,13 @@
+{
+  "split": "entity_test",
+  "sample_size": 100,
+  "requested_n_dims": 4,
+  "backend_requested": "auto",
+  "used_backends": {
+    "heuristic": 100
+  },
+  "fallback_count": 100,
+  "errors": 0,
+  "total_elapsed_sec": 0.01,
+  "output_jsonl": "log/E11/E11_4_infoseek_100/e11_4_infoseek_rewrite.jsonl"
+}

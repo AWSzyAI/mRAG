@@ -105,13 +105,21 @@ sudo apt install -y rsync
 brew install rsync
 
 echo "140.82.112.4 github.com" >> /etc/hosts
+# 或者
+echo "140.82.112.4 github.com" | sudo tee -a /etc/hosts
+
+```
+
+== ！最开始是使用这三个repo，但是后续有定制化的修改，所以在二次部署的时候不要执行这些clone，而是继续用修改后的内容。！==
+```bash
 cd github
 git clone https://github.com/mragbench/MRAG-Bench.git
 git clone https://github.com/google-deepmind/magiclens.git
 git clone https://github.com/LLaVA-VL/LLaVA-NeXT.git
 cd ..
+```
 
-
+```bash
 make config
 eval "$(make -s alias)"
 
@@ -238,10 +246,11 @@ git clone https://github.com/google-research/scenic.git
 cd scenic
 pip install .
 pip install -r scenic/projects/baselines/clip/requirements.txt
-pip install --upgrade "jax[cuda12_pip]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
 pip install ftfy regex tqdm clip-anytorch
-pip uninstall -y jax jaxlib jax-cuda12-plugin jax-cuda12-pjrt
-pip install -U "jax[cuda12]"
+
+# 如果当前环境还要跑 torch，不建议用 "jax[cuda12]"，它会升级 pip CUDA/cuDNN
+# 组件，可能破坏 torch 对 nvidia-cudnn-cu12 的精确版本约束。
+pip install -U "jax[cuda12-local]"
 
 
 
